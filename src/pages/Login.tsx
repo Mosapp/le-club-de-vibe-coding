@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Logo } from "@/components/layout";
 import { MediaSlot } from "@/components/media";
-import { Button, Field, Icon, Input, Note } from "@/components/ui";
+import { Button, Field, Icon, Input, Note, PasswordInput } from "@/components/ui";
 import { navigate } from "@/lib/router";
 import { ApiError, useClub } from "@/lib/store";
 
@@ -68,7 +68,7 @@ export default function Login() {
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
             </Field>
             <Field label="Mot de passe" required>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+              <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
             </Field>
             <Button type="submit" iconRight="arrowRight" loading={pending.signIn}>
               Se connecter

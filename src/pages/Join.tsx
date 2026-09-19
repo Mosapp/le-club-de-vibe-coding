@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { JOIN } from "@/config/content";
 import { MediaSlot } from "@/components/media";
 import { Logo } from "@/components/layout";
-import { Badge, Button, Chip, Field, Icon, Input, ProgressBar, Textarea } from "@/components/ui";
+import { Badge, Button, Chip, Field, Icon, Input, PasswordInput, ProgressBar, Textarea } from "@/components/ui";
 import { navigate } from "@/lib/router";
 import { ApiError, useClub } from "@/lib/store";
 import { cn } from "@/utils/cn";
@@ -227,8 +227,7 @@ export default function Join() {
                     />
                   </Field>
                   <Field label="Mot de passe" required error={errors.password}>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       value={form.password}
                       onChange={(e) => set("password", e.target.value)}
                       placeholder="6 caractères minimum"

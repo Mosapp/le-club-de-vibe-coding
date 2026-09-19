@@ -1,6 +1,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -42,6 +43,8 @@ export type IconName =
   | "target"
   | "layers"
   | "download"
+  | "eye"
+  | "eyeOff"
   | "reset";
 
 const PATHS: Record<IconName, ReactNode> = {
@@ -73,6 +76,8 @@ const PATHS: Record<IconName, ReactNode> = {
   target: <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0-3.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />,
   layers: <path d="m12 4 8 4-8 4-8-4zm8 8-8 4-8-4m16 4-8 4-8-4" />,
   download: <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" />,
+  eye: <path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Zm9.5 2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />,
+  eyeOff: <path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10.8 10.8 0 0 1 12 5c6 0 9.5 7 9.5 7a17 17 0 0 1-3.2 3.8M6.2 6.2C3.9 7.8 2.5 12 2.5 12S6 19 12 19a10.8 10.8 0 0 0 3.1-.5" />,
   reset: <path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4h4" />,
 };
 
@@ -348,6 +353,23 @@ export function Input({ invalid, className, ...rest }: InputHTMLAttributes<HTMLI
         className,
       )}
     />
+  );
+}
+
+export function PasswordInput({ invalid, ...rest }: InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <Input {...rest} type={visible ? "text" : "password"} invalid={invalid} className="pr-12" />
+      <button
+        type="button"
+        onClick={() => setVisible((value) => !value)}
+        aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+        className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-faint transition-colors hover:bg-ink/5 hover:text-ink"
+      >
+        <Icon name={visible ? "eyeOff" : "eye"} className="h-[18px] w-[18px]" />
+      </button>
+    </div>
   );
 }
 
