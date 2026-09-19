@@ -568,9 +568,6 @@ export function AdminMedia() {
                 ) : (
                   <MediaPlaceholder slot={asset.slot} label={asset.label} ratio={asset.ratio} rounded="rounded-none" />
                 )}
-                <span className="label-mono absolute left-3 top-3 rounded-full bg-ink/70 px-2.5 py-1.5 text-white/85">
-                  {asset.slot}
-                </span>
               </div>
 
               <div className="p-5">
