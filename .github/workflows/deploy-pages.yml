@@ -31,6 +31,9 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_ADMIN_MEMBER_IDS: ${{ vars.VITE_ADMIN_MEMBER_IDS }}
+          VITE_ADMIN_NAMES: ${{ vars.VITE_ADMIN_NAMES }}
         run: npm run build
 
       - name: Configure GitHub Pages
