@@ -21,11 +21,8 @@ export function Logo({ dark = false, className }: { dark?: boolean; className?: 
       className={cn("group inline-flex items-center gap-2.5", className)}
       aria-label={`${BRAND.name} — accueil`}
     >
-      <span className="relative flex h-8 w-8 items-center justify-center rounded-[9px] bg-ink transition-transform duration-300 group-hover:-translate-y-0.5">
-        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
-          <path d="M7 15.5 12 5l5 10.5" stroke="#FF6B35" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M9.6 13h4.8" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" />
-        </svg>
+      <span className="relative flex h-8 w-8 overflow-hidden rounded-[9px] bg-ink transition-transform duration-300 group-hover:-translate-y-0.5">
+        <img src="/favicon.jpeg" alt="" className="h-full w-full object-cover" />
       </span>
       <span className={cn("flex flex-col leading-none", dark ? "text-white" : "text-ink")}>
         <span className="text-[14.5px] font-semibold tracking-[-0.02em]">Club de Vibe Coding</span>
