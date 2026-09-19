@@ -13,7 +13,7 @@ export const BRAND = {
   tagline: "On apprend ensemble à créer avec l'IA.",
 };
 
-export const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/IFBp3DpkT4VKPtXhYwhAy6";
+export const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/EJcuVmughNv0LXePUOcAPw";
 
 export const NAV = {
   primary: [
