@@ -395,9 +395,6 @@ export function ClubProvider({ children }: { children: ReactNode }) {
           });
           if (error) throw new ApiError(error.message);
           if (!authData.user) throw new ApiError("Impossible de créer ton compte.");
-          if (!authData.session) {
-            throw new ApiError("Compte créé. Vérifie ton email pour confirmer ton inscription, puis connecte-toi.");
-          }
           const now = new Date().toISOString();
           const member: Member = {
             ...input,
@@ -407,21 +404,27 @@ export function ClubProvider({ children }: { children: ReactNode }) {
             createdAt: now,
             lastSeenAt: now,
           };
-          const { error: profileError } = await supabase.from("members").insert({
-            id: member.id,
-            first_name: member.firstName,
-            last_name: member.lastName,
-            level: member.level,
-            motivations: member.motivations,
-            goal: member.goal,
-            engagement: member.engagement,
-            role: isConfiguredAdmin(member) ? "ADMIN" : "MEMBER",
-          });
-          if (profileError) throw new ApiError(profileError.message);
+          if (authData.session) {
+            const { error: profileError } = await supabase.from("members").upsert({
+              id: member.id,
+              first_name: member.firstName,
+              last_name: member.lastName,
+              level: member.level,
+              motivations: member.motivations,
+              goal: member.goal,
+              engagement: member.engagement,
+              role: isConfiguredAdmin(member) ? "ADMIN" : "MEMBER",
+            });
+            if (profileError) throw new ApiError(profileError.message);
+          }
           member.role = isConfiguredAdmin(member) ? "ADMIN" : "MEMBER";
           setData((prev) => ({ ...prev, members: [...prev.members, member] }));
-          setSessionId(member.id);
-          toast({ title: `Bienvenue ${member.firstName}.`, description: "Ton compte est prêt.", tone: "success" });
+          if (authData.session) setSessionId(member.id);
+          toast({
+            title: authData.session ? `Bienvenue ${member.firstName}.` : "Compte créé.",
+            description: authData.session ? "Ton compte est prêt." : "Vérifie ton email pour confirmer ton inscription, puis connecte-toi.",
+            tone: "success",
+          });
           return member;
         }
         const now = new Date().toISOString();
@@ -456,8 +459,18 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       if (supabase) {
         const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error || !authData.user) throw new ApiError(error?.message ?? "Connexion impossible.");
-        const { data: profile, error: profileError } = await supabase.from("members").select("*").eq("id", authData.user.id).single();
-        if (profileError || !profile) throw new ApiError("Profil membre introuvable.");
+        let { data: profile, error: profileError } = await supabase.from("members").select("*").eq("id", authData.user.id).single();
+        if (!profile) {
+          const metadata = authData.user.user_metadata ?? {};
+          const recovery = await supabase.from("members").upsert({
+            id: authData.user.id,
+            first_name: String(metadata.first_name ?? "Membre"),
+            last_name: String(metadata.last_name ?? "du club"),
+          }).select("*").single();
+          profile = recovery.data;
+          profileError = recovery.error;
+        }
+        if (profileError || !profile) throw new ApiError(profileError?.message ?? "Profil membre introuvable.");
         const member: Member = {
           id: profile.id,
           firstName: profile.first_name,
@@ -474,6 +487,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         };
         setData((prev) => ({ ...prev, members: [...prev.members.filter((m) => m.id !== member.id), member] }));
         setSessionId(member.id);
+        setBusy("signIn", false);
         toast({ title: `Content de te revoir, ${member.firstName}.`, tone: "success" });
         return;
       }
