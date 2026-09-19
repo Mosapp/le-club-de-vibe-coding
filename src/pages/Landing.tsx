@@ -7,6 +7,7 @@ import {
   PROJECTS_SECTION,
   SESSIONS_SECTION,
   VIBE_CODING,
+  WHATSAPP_GROUP_URL,
   WHY_JOIN,
 } from "@/config/content";
 import { ChallengeCard, ProjectCard, WhyCard } from "@/components/cards";
@@ -63,6 +64,15 @@ function Hero() {
                 {HERO.secondaryCta}
               </Button>
             </div>
+            <a
+              href={WHATSAPP_GROUP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex items-center gap-2 text-[14px] font-medium text-brand-ink underline decoration-brand/40 underline-offset-4 transition-colors hover:text-brand"
+            >
+              Rejoindre le groupe WhatsApp
+              <Icon name="arrowUpRight" className="h-4 w-4" />
+            </a>
           </Reveal>
 
           <Reveal delay={280}>

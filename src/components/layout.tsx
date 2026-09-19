@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BRAND, FOOTER, NAV } from "@/config/content";
+import { BRAND, FOOTER, NAV, WHATSAPP_GROUP_URL } from "@/config/content";
 import { navigate, useRouterLink } from "@/lib/router";
 import { useClub } from "@/lib/store";
 import { cn } from "@/utils/cn";
@@ -177,6 +177,15 @@ export function Footer() {
             <Logo />
             <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-muted">{BRAND.tagline}</p>
             <p className="mt-6 max-w-sm text-[13.5px] leading-relaxed text-faint">{FOOTER.note}</p>
+            <a
+              href={WHATSAPP_GROUP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 inline-flex items-center gap-2 text-[14px] font-medium text-brand-ink transition-colors hover:text-brand"
+            >
+              Rejoindre le groupe WhatsApp
+              <Icon name="arrowUpRight" className="h-4 w-4" />
+            </a>
           </div>
 
           <div className="grid gap-8 sm:grid-cols-3">
