@@ -11,7 +11,7 @@ import {
 import { CHALLENGES_SECTION, RULES_INITIAL } from "@/config/content";
 import { clearMediaOverrides, writeMediaOverride } from "@/config/media";
 import { isConfiguredAdmin } from "@/config/admin-access";
-import { supabase } from "@/lib/supabase";
+import { authRedirectUrl, supabase } from "@/lib/supabase";
 
 /* ------------------------------------------------------------------
    COUCHE DONNÉES — CLUB DE VIBE CODING
@@ -391,7 +391,10 @@ export function ClubProvider({ children }: { children: ReactNode }) {
           const { data: authData, error } = await supabase.auth.signUp({
             email: input.email,
             password: input.password,
-            options: { data: { first_name: input.firstName, last_name: input.lastName } },
+            options: {
+              emailRedirectTo: authRedirectUrl,
+              data: { first_name: input.firstName, last_name: input.lastName },
+            },
           });
           if (error) throw new ApiError(error.message);
           if (!authData.user) throw new ApiError("Impossible de créer ton compte.");
