@@ -498,7 +498,7 @@ export function Modal({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   const widths = { sm: "max-w-md", md: "max-w-xl", lg: "max-w-3xl" } as const;
