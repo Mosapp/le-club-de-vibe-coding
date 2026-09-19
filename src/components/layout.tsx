@@ -22,7 +22,7 @@ export function Logo({ dark = false, className }: { dark?: boolean; className?: 
       aria-label={`${BRAND.name} — accueil`}
     >
       <span className="relative flex h-8 w-8 overflow-hidden rounded-[9px] bg-ink transition-transform duration-300 group-hover:-translate-y-0.5">
-        <img src="/favicon.jpeg" alt="" className="h-full w-full object-cover" />
+        <img src="./favicon.jpeg" alt="" className="h-full w-full object-cover" />
       </span>
       <span className={cn("flex flex-col leading-none", dark ? "text-white" : "text-ink")}>
         <span className="text-[14.5px] font-semibold tracking-[-0.02em]">Club de Vibe Coding</span>
