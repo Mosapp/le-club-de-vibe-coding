@@ -17,6 +17,7 @@ import { Badge, Button, Card, Eyebrow, Icon, Note, SectionHeading } from "@/comp
 import { navigate } from "@/lib/router";
 import { Reveal, RevealMask } from "@/lib/motion";
 import { useClub } from "@/lib/store";
+import { useEffect, useRef } from "react";
 
 /* ==================================================================
    HERO — la force vient de la composition, pas des effets.
@@ -147,10 +148,130 @@ function Hero() {
    C'EST QUOI LE VIBE CODING ? (section sombre, premium)
 ================================================================== */
 
+function ParticleField() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const palette = ["#E95D2C", "#B0CEE2", "#ffffff", "#45586C"];
+    let width = 0;
+    let height = 0;
+    let frame = 0;
+    let particles: { x: number; y: number; vx: number; vy: number; size: number; color: string }[] = [];
+    const pointer = { x: 0.5, y: 0.5, active: false };
+
+    const resize = () => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (!rect) return;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const count = Math.min(440, Math.max(180, Math.floor((width * height) / 7200)));
+      particles = Array.from({ length: count }, (_, index) => {
+        const angle = index * 2.39996;
+        const radius = Math.random() ** 0.65;
+        return {
+          x: width * (0.5 + Math.cos(angle) * radius * 0.47),
+          y: height * (0.49 + Math.sin(angle) * radius * 0.42),
+          vx: (Math.random() - 0.5) * 0.12,
+          vy: (Math.random() - 0.5) * 0.12,
+          size: Math.random() * 1.6 + 0.35,
+          color: palette[index % palette.length],
+        };
+      });
+    };
+
+    const movePointer = (event: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = (event.clientX - rect.left) / rect.width;
+      pointer.y = (event.clientY - rect.top) / rect.height;
+      pointer.active = true;
+    };
+    const leave = () => {
+      pointer.active = false;
+    };
+
+    const draw = (time: number) => {
+      context.clearRect(0, 0, width, height);
+      const centerX = width * 0.52;
+      const centerY = height * 0.48;
+      const pulse = Math.sin(time * 0.001) * 0.6;
+      particles.forEach((particle) => {
+        if (!reduceMotion) {
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          if (particle.x < -20) particle.x = width + 20;
+          if (particle.x > width + 20) particle.x = -20;
+          if (particle.y < -20) particle.y = height + 20;
+          if (particle.y > height + 20) particle.y = -20;
+        }
+        const dx = centerX - particle.x;
+        const dy = centerY - particle.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        const rocketBias = Math.max(0, 1 - distance / (Math.min(width, height) * 0.52));
+        if (pointer.active) {
+          const px = pointer.x * width - particle.x;
+          const py = pointer.y * height - particle.y;
+          const pointerDistance = Math.hypot(px, py) || 1;
+          if (pointerDistance < 170) {
+            particle.x -= (px / pointerDistance) * (1 - pointerDistance / 170) * 0.7;
+            particle.y -= (py / pointerDistance) * (1 - pointerDistance / 170) * 0.7;
+          }
+        }
+        context.globalAlpha = 0.22 + rocketBias * 0.7;
+        context.fillStyle = particle.color;
+        context.beginPath();
+        context.arc(particle.x, particle.y, particle.size + rocketBias * 0.7 + pulse * 0.05, 0, Math.PI * 2);
+        context.fill();
+      });
+      context.globalAlpha = 0.14;
+      context.strokeStyle = "#B0CEE2";
+      context.lineWidth = 1;
+      for (let i = 0; i < particles.length; i += 3) {
+        const first = particles[i];
+        const second = particles[(i + 11) % particles.length];
+        if (Math.hypot(first.x - second.x, first.y - second.y) < 86) {
+          context.beginPath();
+          context.moveTo(first.x, first.y);
+          context.lineTo(second.x, second.y);
+          context.stroke();
+        }
+      }
+      context.globalAlpha = 1;
+      frame = window.requestAnimationFrame(draw);
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+    canvas.addEventListener("pointermove", movePointer);
+    canvas.addEventListener("pointerleave", leave);
+    frame = window.requestAnimationFrame(draw);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", resize);
+      canvas.removeEventListener("pointermove", movePointer);
+      canvas.removeEventListener("pointerleave", leave);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-auto absolute inset-0 h-full w-full opacity-90" />;
+}
+
 function VibeCodingSection() {
   return (
-    <section id="vibe-coding" className="relative overflow-hidden bg-ink py-20 text-white md:py-28">
-      <div className="container-x">
+    <section id="vibe-coding" className="relative overflow-hidden bg-[#101c24] py-20 text-white md:py-28">
+      <ParticleField />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(69,88,108,0.2),transparent_52%)]" />
+      <div className="container-x relative z-10">
         <div className="grid gap-14 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
             <Reveal>
@@ -167,7 +288,7 @@ function VibeCodingSection() {
               <p className="mt-6 max-w-md text-[15.5px] leading-relaxed text-white/60">{VIBE_CODING.intro}</p>
             </Reveal>
             <Reveal delay={180} className="mt-9">
-              <div className="overflow-hidden rounded-lg border border-white/12">
+              <div className="overflow-hidden rounded-lg border border-white/20 bg-white/[0.06] shadow-[0_24px_80px_-40px_rgba(176,206,226,0.5)] backdrop-blur-md">
                 <MediaSlot slot={VIBE_CODING.mediaSlot} rounded="rounded-none" />
               </div>
               <p className="label-mono mt-3 text-white/35">
@@ -177,10 +298,10 @@ function VibeCodingSection() {
           </div>
 
           <div className="lg:col-span-7">
-            <ol className="grid gap-px overflow-hidden rounded-lg border border-white/12 bg-white/12 sm:grid-cols-2">
+            <ol className="grid gap-px overflow-hidden rounded-lg border border-white/20 bg-white/[0.12] shadow-[0_24px_80px_-40px_rgba(176,206,226,0.45)] backdrop-blur-xl sm:grid-cols-2">
               {VIBE_CODING.steps.map((step, i) => (
-                <Reveal as="li" key={step.n} delay={i * 70} className="bg-ink">
-                  <div className="group h-full p-6 transition-colors duration-300 hover:bg-white/[0.04] md:p-8">
+                <Reveal as="li" key={step.n} delay={i * 70} className="bg-[#1a2730]/65 backdrop-blur-md">
+                  <div className="group h-full p-6 transition-colors duration-300 hover:bg-white/[0.09] md:p-8">
                     <span className="label-mono text-brand">{step.n}</span>
                     <h3 className="mt-5 text-[20px] font-semibold leading-tight text-white">{step.title}</h3>
                     <p className="mt-3 text-[14.5px] leading-relaxed text-white/55">{step.text}</p>
@@ -189,7 +310,7 @@ function VibeCodingSection() {
               ))}
             </ol>
             <Reveal delay={280}>
-              <div className="mt-8 flex flex-col gap-4 rounded-lg border border-white/12 bg-white/[0.03] p-6 sm:flex-row sm:items-center sm:justify-between md:p-7">
+              <div className="mt-8 flex flex-col gap-4 rounded-lg border border-white/20 bg-white/[0.08] p-6 shadow-[0_20px_70px_-40px_rgba(176,206,226,0.55)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between md:p-7">
                 <p className="max-w-sm text-[15px] leading-relaxed text-white/70">
                   Tu ne sais pas coder ? C'est exactement pour ça que le club existe.
                 </p>
