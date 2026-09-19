@@ -82,8 +82,8 @@ export default function ProfilePage() {
             <MediaSlot slot="COMMUNITY_MEDIA_01" ratio="16/9" rounded="rounded-none" className="absolute inset-0 h-full" />
             <div aria-hidden="true" className="absolute inset-0 bg-ink/55" />
           </div>
-          <div className="px-6 pb-6 md:px-8 md:pb-8">
-            <div className="-mt-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="px-6 pb-6 pt-6 md:px-8 md:pb-8 md:pt-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex items-end gap-4">
                 <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-line bg-surface text-[24px] font-semibold text-ink shadow-[0_12px_30px_-20px_rgba(23,23,23,0.6)]">
                   {me.avatarUrl ? <img src={me.avatarUrl} alt="" className="h-full w-full object-cover" /> : initials(me)}
