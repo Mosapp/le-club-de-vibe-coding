@@ -113,7 +113,7 @@ export default function Join() {
               <path
                 className="check-path"
                 d="M5 13l4 4L19 7"
-                stroke="#0d47a1"
+                stroke="#a63e1b"
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
