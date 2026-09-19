@@ -65,23 +65,37 @@ create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public
 as $$ select exists (select 1 from public.members where id = auth.uid() and role = 'ADMIN' and status = 'ACTIVE') $$;
 
+drop policy if exists "members can read active members" on public.members;
+drop policy if exists "members update own profile" on public.members;
+drop policy if exists "members insert own profile" on public.members;
 create policy "members can read active members" on public.members for select to authenticated using (status = 'ACTIVE' or id = auth.uid() or public.is_admin());
 create policy "members update own profile" on public.members for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 create policy "members insert own profile" on public.members for insert to authenticated with check (id = auth.uid());
 
+drop policy if exists "members read ideas" on public.ideas;
+drop policy if exists "members create ideas" on public.ideas;
+drop policy if exists "admins update ideas" on public.ideas;
+drop policy if exists "admins delete ideas" on public.ideas;
 create policy "members read ideas" on public.ideas for select to authenticated using (true);
 create policy "members create ideas" on public.ideas for insert to authenticated with check (author_id = auth.uid());
 create policy "admins update ideas" on public.ideas for update to authenticated using (public.is_admin()) with check (public.is_admin());
 create policy "admins delete ideas" on public.ideas for delete to authenticated using (public.is_admin());
 
+drop policy if exists "members read published projects" on public.projects;
+drop policy if exists "members create own projects" on public.projects;
+drop policy if exists "owners update projects" on public.projects;
+drop policy if exists "owners delete projects" on public.projects;
 create policy "members read published projects" on public.projects for select to authenticated using (published or author_id = auth.uid() or public.is_admin());
 create policy "members create own projects" on public.projects for insert to authenticated with check (author_id = auth.uid());
 create policy "owners update projects" on public.projects for update to authenticated using (author_id = auth.uid() or public.is_admin()) with check (author_id = auth.uid() or public.is_admin());
 create policy "owners delete projects" on public.projects for delete to authenticated using (author_id = auth.uid() or public.is_admin());
 
+drop policy if exists "members read votes" on public.idea_votes;
+drop policy if exists "members vote once" on public.idea_votes;
 create policy "members read votes" on public.idea_votes for select to authenticated using (true);
 create policy "members vote once" on public.idea_votes for insert to authenticated with check (member_id = auth.uid());
 
+drop policy if exists "members read notifications" on public.notifications;
 create policy "members read notifications" on public.notifications for select to authenticated using (true);
 
 create or replace function public.notify_new_idea()
@@ -97,6 +111,16 @@ $$;
 drop trigger if exists on_new_idea on public.ideas;
 create trigger on_new_idea after insert on public.ideas for each row execute function public.notify_new_idea();
 
-alter publication supabase_realtime add table public.ideas;
-alter publication supabase_realtime add table public.notifications;
-alter publication supabase_realtime add table public.projects;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'ideas') then
+    alter publication supabase_realtime add table public.ideas;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications') then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'projects') then
+    alter publication supabase_realtime add table public.projects;
+  end if;
+end
+$$;
