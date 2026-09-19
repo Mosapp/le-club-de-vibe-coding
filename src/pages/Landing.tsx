@@ -12,150 +12,18 @@ import {
 } from "@/config/content";
 import { ChallengeCard, ProjectCard, WhyCard } from "@/components/cards";
 import { MediaSlot } from "@/components/media";
-import { Footer } from "@/components/layout";
+import { Footer, Navbar } from "@/components/layout";
 import { Badge, Button, Card, Eyebrow, Icon, Note, SectionHeading } from "@/components/ui";
 import { navigate } from "@/lib/router";
 import { Reveal, RevealMask } from "@/lib/motion";
 import { useClub } from "@/lib/store";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 /* ==================================================================
    HERO — la force vient de la composition, pas des effets.
 ================================================================== */
 
-function useTypewriter(text: string, speed = 38, startDelay = 600) {
-  const [displayed, setDisplayed] = useState("");
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    let interval: number | undefined;
-    const delay = window.setTimeout(() => {
-      let index = 0;
-      interval = window.setInterval(() => {
-        index += 1;
-        setDisplayed(text.slice(0, index));
-        if (index >= text.length) {
-          setDone(true);
-          if (interval) window.clearInterval(interval);
-        }
-      }, speed);
-    }, startDelay);
-    return () => {
-      window.clearTimeout(delay);
-      if (interval) window.clearInterval(interval);
-    };
-  }, [speed, startDelay, text]);
-
-  return { displayed, done };
-}
-
-function MainframeNavbar() {
-  const [open, setOpen] = useState(false);
-  const links = ["Labs", "Studio", "Openings", "Shop"];
-
-  return (
-    <>
-      <header className="fixed inset-x-0 top-0 z-10 flex items-center justify-between px-5 py-4 text-white sm:px-8 sm:py-5">
-        <a href="#top" className="flex items-center gap-3" style={{ fontFamily: "var(--font-heading)" }}>
-          <span className="text-[21px] tracking-tight sm:text-[26px]">Mainframe®</span>
-          <span className="select-none text-[25px] leading-none tracking-[-0.02em] sm:text-[30px]">✳︎</span>
-        </a>
-        <nav className="hidden items-center text-[23px] md:flex">
-          {links.map((link, index) => (
-            <span key={link}>
-              <a href={`#${link.toLowerCase()}`} className="transition-opacity hover:opacity-60">{link}</a>
-              {index < links.length - 1 ? ", " : ""}
-            </span>
-          ))}
-        </nav>
-        <a href="mailto:hello@mainframe.co" className="hidden text-[23px] underline underline-offset-2 transition-opacity hover:opacity-60 md:block">Get in touch</a>
-        <button type="button" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex flex-col gap-[5px] md:hidden">
-          <span className={`h-[2px] w-6 bg-white transition duration-300 ${open ? "translate-y-[7px] rotate-45" : ""}`} />
-          <span className={`h-[2px] w-6 bg-white transition duration-300 ${open ? "opacity-0" : ""}`} />
-          <span className={`h-[2px] w-6 bg-white transition duration-300 ${open ? "-translate-y-[7px] -rotate-45" : ""}`} />
-        </button>
-      </header>
-      <div className={`fixed inset-0 z-[9] flex flex-col justify-center gap-8 bg-black/90 px-8 backdrop-blur-md transition-opacity duration-300 md:hidden ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}>
-        {links.map((link) => <a key={link} href={`#${link.toLowerCase()}`} onClick={() => setOpen(false)} className="text-[32px] font-medium text-white">{link}</a>)}
-        <a href="mailto:hello@mainframe.co" onClick={() => setOpen(false)} className="text-[32px] font-medium text-white underline underline-offset-4">Get in touch</a>
-      </div>
-    </>
-  );
-}
-
-function CopyIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 12 12" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.1">
-      <rect x="3.5" y="1.5" width="6.5" height="7" rx="0.7" />
-      <path d="M2.5 4.5H2a.5.5 0 0 0-.5.5v4.5a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5V9" />
-    </svg>
-  );
-}
-
 function Hero() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const targetTimeRef = useRef(0);
-  const seekingRef = useRef(false);
-  const previousXRef = useRef<number | null>(null);
-  const [actionsVisible, setActionsVisible] = useState(false);
-  const { displayed, done } = useTypewriter("Glad you stopped in. Good taste tends to find us. Now, what are we building?");
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const seek = () => {
-      if (seekingRef.current || !video.duration) return;
-      seekingRef.current = true;
-      video.currentTime = targetTimeRef.current;
-    };
-    const onSeeked = () => {
-      seekingRef.current = false;
-      if (Math.abs(video.currentTime - targetTimeRef.current) > 0.01) seek();
-    };
-    const onMouseMove = (event: MouseEvent) => {
-      if (previousXRef.current === null || !video.duration) {
-        previousXRef.current = event.clientX;
-        return;
-      }
-      const delta = event.clientX - previousXRef.current;
-      previousXRef.current = event.clientX;
-      targetTimeRef.current = Math.max(0, Math.min(video.duration, targetTimeRef.current + (delta / window.innerWidth) * 0.8 * video.duration));
-      seek();
-    };
-    video.addEventListener("seeked", onSeeked);
-    window.addEventListener("mousemove", onMouseMove);
-    return () => {
-      video.removeEventListener("seeked", onSeeked);
-      window.removeEventListener("mousemove", onMouseMove);
-    };
-  }, []);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setActionsVisible(true), 400);
-    return () => window.clearTimeout(timeout);
-  }, []);
-
-  const copyEmail = () => void navigator.clipboard?.writeText("hello@mainframe.co");
-  const actions = ["Pitch us an idea", "Come work here", "Send a brief hello", "See how we operate"];
-
-  return (
-    <section id="top" className="relative z-[1] flex h-screen min-h-[620px] flex-col justify-end overflow-hidden bg-black pb-12 text-white md:justify-center md:pb-0">
-      <video ref={videoRef} className="fixed inset-0 z-0 h-full w-full object-cover" style={{ objectPosition: "70% center" }} muted playsInline preload="auto" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260826_041744_63efcd78-bf7d-4039-99e2-2461e8a61903.mp4" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] bg-black/20" />
-      <MainframeNavbar />
-      <div className="relative z-[2] max-w-xl px-5 sm:px-8 md:px-10">
-        <p className="pointer-events-none mb-5 select-none text-[clamp(18px,4vw,26px)] font-normal leading-[1.3] text-white blur-[4px] sm:mb-6">Hey there, meet A.R.I.A,<br />Mainframe&apos;s Adaptive Response Interface Agent</p>
-        <p className="mb-5 min-h-[54px] text-[clamp(18px,4vw,26px)] font-normal leading-[1.35] sm:mb-6">{displayed}{!done && <span className="ml-[2px] inline-block h-[1.1em] w-[2px] animate-[blink_1s_step-end_infinite] bg-white align-middle" />}</p>
-        <div className="flex flex-wrap gap-y-1 transition duration-400 ease-out" style={{ opacity: actionsVisible ? 1 : 0, transform: actionsVisible ? "translateY(0)" : "translateY(8px)" }}>
-          {actions.map((action) => <a key={action} href="#contact" className="mx-[0.2em] mb-[0.4em] inline-flex items-center justify-center whitespace-nowrap rounded-full border border-black/10 bg-white px-4 py-[0.3em] text-[13px] text-black transition-colors duration-200 hover:bg-black hover:text-white sm:px-5 sm:text-[15px]">{action}</a>)}
-          <button type="button" onClick={copyEmail} className="mx-[0.2em] mb-[0.4em] inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white bg-transparent px-4 py-[0.3em] text-[13px] text-white transition-colors duration-200 hover:bg-white hover:text-black sm:gap-3 sm:px-5 sm:text-[15px]"><span>Reach us: <span className="underline underline-offset-1">hello@mainframe.co</span></span><CopyIcon /></button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function LegacyHero() {
   const { me } = useClub();
   return (
     <section className="relative overflow-hidden pt-[104px] pb-14 md:pt-[132px] md:pb-20 lg:pb-28">
@@ -754,6 +622,7 @@ function CtaSection() {
 export default function Landing() {
   return (
     <div className="min-h-screen bg-paper">
+      <Navbar />
       <main>
         <Hero />
         <VibeCodingSection />
