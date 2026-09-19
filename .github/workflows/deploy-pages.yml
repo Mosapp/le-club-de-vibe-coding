@@ -34,8 +34,8 @@ jobs:
         env:
           VITE_ADMIN_MEMBER_IDS: ${{ vars.VITE_ADMIN_MEMBER_IDS }}
           VITE_ADMIN_NAMES: ${{ vars.VITE_ADMIN_NAMES }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Configure GitHub Pages
