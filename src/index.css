@@ -19,11 +19,11 @@
   --color-line-2: #f0efeb;
 
   /* Couleurs fortes (accents uniquement) */
-  --color-brand: #ff6b35;
-  --color-brand-ink: #c9491a;
-  --color-brand-soft: #fff0e9;
-  --color-violet: #6d4aff;
-  --color-violet-soft: #efeaff;
+  --color-brand: #1769aa;
+  --color-brand-ink: #0d47a1;
+  --color-brand-soft: #e8f1fb;
+  --color-violet: #e0a900;
+  --color-violet-soft: #fff4c7;
   --color-deep: #123a52;
   --color-moss: #3d6b4f;
 
@@ -77,7 +77,7 @@
   }
 
   ::selection {
-    background: #ffd9c9;
+    background: #fff0a8;
     color: var(--color-ink);
   }
 
