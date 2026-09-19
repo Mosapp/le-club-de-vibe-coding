@@ -8,6 +8,8 @@ import { ApiError, useClub } from "@/lib/store";
 import { cn } from "@/utils/cn";
 
 type Form = {
+  email: string;
+  password: string;
   firstName: string;
   lastName: string;
   level: string;
@@ -16,7 +18,7 @@ type Form = {
   engagement: string;
 };
 
-const EMPTY: Form = { firstName: "", lastName: "", level: "", motivations: [], goal: "", engagement: "" };
+const EMPTY: Form = { email: "", password: "", firstName: "", lastName: "", level: "", motivations: [], goal: "", engagement: "" };
 
 export default function Join() {
   const { signUp, pending, me } = useClub();
@@ -40,6 +42,8 @@ export default function Join() {
   const validate = (index: number): Record<string, string> => {
     const e: Record<string, string> = {};
     if (index === 0) {
+      if (!form.email.trim() || !form.email.includes("@")) e.email = "Entre une adresse email valide.";
+      if (form.password.length < 6) e.password = "Le mot de passe doit contenir au moins 6 caractères.";
       if (!form.firstName.trim()) e.firstName = "Ton prénom est obligatoire.";
       else if (form.firstName.trim().length < 2) e.firstName = "Ton prénom est un peu court.";
       if (!form.lastName.trim()) e.lastName = "Ton nom est obligatoire.";
@@ -64,6 +68,8 @@ export default function Join() {
     }
     try {
       await signUp({
+        email: form.email.trim(),
+        password: form.password,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         level: form.level,
@@ -210,6 +216,26 @@ export default function Join() {
             <div className="mt-9 space-y-7">
               {step === 0 && (
                 <>
+                  <Field label="Email" required error={errors.email}>
+                    <Input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => set("email", e.target.value)}
+                      placeholder="toi@example.com"
+                      invalid={!!errors.email}
+                      autoComplete="email"
+                    />
+                  </Field>
+                  <Field label="Mot de passe" required error={errors.password}>
+                    <Input
+                      type="password"
+                      value={form.password}
+                      onChange={(e) => set("password", e.target.value)}
+                      placeholder="6 caractères minimum"
+                      invalid={!!errors.password}
+                      autoComplete="new-password"
+                    />
+                  </Field>
                   <Field label="Prénom" required error={errors.firstName}>
                     <Input
                       value={form.firstName}

@@ -86,7 +86,7 @@ export default function ProjectsPage() {
     setOpen(true);
   };
 
-  const submit = () => {
+  const submit = async () => {
     setError(null);
     const payload = {
       title: form.title.trim(),
@@ -102,7 +102,7 @@ export default function ProjectsPage() {
     };
     try {
       if (editingId) updateProject(editingId, payload);
-      else createProject(payload);
+      else await createProject(payload);
       setOpen(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Impossible d'enregistrer le projet.");

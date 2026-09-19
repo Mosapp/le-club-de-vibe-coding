@@ -11,6 +11,7 @@ import {
 import { CHALLENGES_SECTION, RULES_INITIAL } from "@/config/content";
 import { clearMediaOverrides, writeMediaOverride } from "@/config/media";
 import { isConfiguredAdmin } from "@/config/admin-access";
+import { supabase } from "@/lib/supabase";
 
 /* ------------------------------------------------------------------
    COUCHE DONNÉES — CLUB DE VIBE CODING
@@ -217,13 +218,13 @@ interface Ctx {
   dismissToast: (id: string) => void;
   pending: Record<string, boolean>;
   /* auth */
-  signUp: (input: Omit<Member, "id" | "role" | "status" | "createdAt" | "lastSeenAt">) => Promise<Member>;
-  signIn: (memberId: string) => Promise<void>;
+  signUp: (input: Omit<Member, "id" | "role" | "status" | "createdAt" | "lastSeenAt"> & { email: string; password: string }) => Promise<Member>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => void;
   /* profil */
   updateProfile: (patch: Partial<Pick<Member, "firstName" | "lastName" | "avatarUrl" | "level" | "goal" | "engagement" | "motivations">>) => void;
   /* projets */
-  createProject: (input: Omit<Project, "id" | "authorId" | "createdAt" | "published">) => void;
+  createProject: (input: Omit<Project, "id" | "authorId" | "createdAt" | "published">) => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>) => void;
   deleteProject: (id: string) => void;
   toggleProjectPublish: (id: string) => void;
@@ -290,6 +291,59 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     }
   }, [sessionId]);
 
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    const loadSharedData = async () => {
+      const { data: auth } = await supabase.auth.getSession();
+      if (!auth.session || cancelled) return;
+      setSessionId(auth.session.user.id);
+      const [{ data: remoteMembers }, { data: remoteProjects }] = await Promise.all([
+        supabase.from("members").select("*"),
+        supabase.from("projects").select("*").order("created_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+      const members: Member[] = (remoteMembers ?? []).map((profile) => ({
+        id: profile.id,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        avatarUrl: profile.avatar_url ?? undefined,
+        level: profile.level,
+        motivations: profile.motivations ?? [],
+        goal: profile.goal,
+        engagement: profile.engagement,
+        role: profile.role,
+        status: profile.status,
+        createdAt: profile.created_at,
+        lastSeenAt: profile.last_seen_at,
+      }));
+      const projects: Project[] = (remoteProjects ?? []).map((project) => ({
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        kind: project.kind,
+        tech: project.tech ?? [],
+        mediaSlot: project.media_slot,
+        imageUrl: project.image_url,
+        link: project.link,
+        authorId: project.author_id,
+        createdAt: project.created_at,
+        published: project.published,
+      }));
+      setData((prev) => ({ ...prev, members, projects }));
+    };
+    void loadSharedData();
+    const channel = supabase
+      .channel("club-shared-data")
+      .on("postgres_changes", { event: "*", schema: "public", table: "members" }, () => void loadSharedData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, () => void loadSharedData())
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
   const me = useMemo(
     () => data.members.find((m) => m.id === sessionId && m.status === "ACTIVE") ?? null,
     [data.members, sessionId],
@@ -333,6 +387,43 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       try {
         if (!input.firstName.trim()) throw new ApiError("Ton prénom est obligatoire.");
         if (!input.lastName.trim()) throw new ApiError("Ton nom est obligatoire.");
+        if (supabase) {
+          const { data: authData, error } = await supabase.auth.signUp({
+            email: input.email,
+            password: input.password,
+            options: { data: { first_name: input.firstName, last_name: input.lastName } },
+          });
+          if (error) throw new ApiError(error.message);
+          if (!authData.user) throw new ApiError("Impossible de créer ton compte.");
+          if (!authData.session) {
+            throw new ApiError("Compte créé. Vérifie ton email pour confirmer ton inscription, puis connecte-toi.");
+          }
+          const now = new Date().toISOString();
+          const member: Member = {
+            ...input,
+            id: authData.user.id,
+            role: "MEMBER",
+            status: "ACTIVE",
+            createdAt: now,
+            lastSeenAt: now,
+          };
+          const { error: profileError } = await supabase.from("members").insert({
+            id: member.id,
+            first_name: member.firstName,
+            last_name: member.lastName,
+            level: member.level,
+            motivations: member.motivations,
+            goal: member.goal,
+            engagement: member.engagement,
+            role: isConfiguredAdmin(member) ? "ADMIN" : "MEMBER",
+          });
+          if (profileError) throw new ApiError(profileError.message);
+          member.role = isConfiguredAdmin(member) ? "ADMIN" : "MEMBER";
+          setData((prev) => ({ ...prev, members: [...prev.members, member] }));
+          setSessionId(member.id);
+          toast({ title: `Bienvenue ${member.firstName}.`, description: "Ton compte est prêt.", tone: "success" });
+          return member;
+        }
         const now = new Date().toISOString();
         const member: Member = {
           ...input,
@@ -359,10 +450,34 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   );
 
   const signIn: Ctx["signIn"] = useCallback(
-    async (memberId) => {
+    async (email, password) => {
       setBusy("signIn", true);
       await new Promise((r) => setTimeout(r, 320));
-      const member = data.members.find((m) => m.id === memberId);
+      if (supabase) {
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error || !authData.user) throw new ApiError(error?.message ?? "Connexion impossible.");
+        const { data: profile, error: profileError } = await supabase.from("members").select("*").eq("id", authData.user.id).single();
+        if (profileError || !profile) throw new ApiError("Profil membre introuvable.");
+        const member: Member = {
+          id: profile.id,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          avatarUrl: profile.avatar_url ?? undefined,
+          level: profile.level,
+          motivations: profile.motivations ?? [],
+          goal: profile.goal,
+          engagement: profile.engagement,
+          role: profile.role,
+          status: profile.status,
+          createdAt: profile.created_at,
+          lastSeenAt: profile.last_seen_at,
+        };
+        setData((prev) => ({ ...prev, members: [...prev.members.filter((m) => m.id !== member.id), member] }));
+        setSessionId(member.id);
+        toast({ title: `Content de te revoir, ${member.firstName}.`, tone: "success" });
+        return;
+      }
+      const member = data.members.find((m) => m.id === email);
       setBusy("signIn", false);
       if (!member) throw new ApiError("Ce profil n'existe plus.");
       if (member.status === "SUSPENDED") throw new ApiError("Ce profil est suspendu. Contacte le bureau du club.");
@@ -373,6 +488,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    if (supabase) void supabase.auth.signOut();
     setSessionId(null);
     toast({ title: "À bientôt.", tone: "info" });
   }, [toast]);
@@ -394,9 +510,43 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   /* ---------------------------- PROJETS -------------------------- */
 
   const createProject: Ctx["createProject"] = useCallback(
-    (input) => {
+    async (input) => {
       const m = requireMember();
       if (!input.title.trim()) throw new ApiError("Ton projet a besoin d'un nom.");
+      if (supabase) {
+        const { data: project, error } = await supabase
+          .from("projects")
+          .insert({
+            title: input.title,
+            description: input.description,
+            kind: input.kind,
+            tech: input.tech,
+            media_slot: input.mediaSlot,
+            image_url: input.imageUrl,
+            link: input.link,
+            author_id: m.id,
+            published: true,
+          })
+          .select()
+          .single();
+        if (error || !project) throw new ApiError(error?.message ?? "Impossible de publier le projet.");
+        const created: Project = {
+          id: project.id,
+          title: project.title,
+          description: project.description,
+          kind: project.kind,
+          tech: project.tech ?? [],
+          mediaSlot: project.media_slot,
+          imageUrl: project.image_url,
+          link: project.link,
+          authorId: project.author_id,
+          createdAt: project.created_at,
+          published: project.published,
+        };
+        setData((prev) => ({ ...prev, projects: [created, ...prev.projects] }));
+        toast({ title: "Projet publié sur le mur des créations.", tone: "success" });
+        return;
+      }
       setData((prev) => ({
         ...prev,
         projects: [

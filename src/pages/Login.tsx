@@ -1,22 +1,23 @@
 import { useState } from "react";
 import { Logo } from "@/components/layout";
 import { MediaSlot } from "@/components/media";
-import { Button, Card, EmptyState, Icon, Note } from "@/components/ui";
+import { Button, Field, Icon, Input, Note } from "@/components/ui";
 import { navigate } from "@/lib/router";
-import { ApiError, formatDate, initials, useClub } from "@/lib/store";
-import { cn } from "@/utils/cn";
+import { ApiError, useClub } from "@/lib/store";
 
 /* Connexion : reconnaît les profils déjà enregistrés sur cet appareil.
    En production, cette page branche un vrai flux d'authentification serveur. */
 
 export default function Login() {
-  const { data, signIn, pending, me } = useClub();
+  const { signIn, pending } = useClub();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const enter = async (id: string) => {
+  const enter = async () => {
     setError(null);
     try {
-      await signIn(id);
+      await signIn(email.trim(), password);
       navigate("/app");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Connexion impossible. Réessaie.");
@@ -53,10 +54,7 @@ export default function Login() {
           <h1 className="text-[clamp(1.8rem,4.6vw,2.5rem)] font-semibold leading-[1.06] text-ink">
             Reprendre là où tu t'es arrêté.
           </h1>
-          <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-muted">
-            Choisis ton profil pour entrer dans ton espace membre. Les profils listés ici sont ceux enregistrés sur cet
-            appareil.
-          </p>
+          <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-muted">Connecte-toi avec ton email et ton mot de passe.</p>
 
           {error && (
             <p className="mt-7 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-700">
@@ -65,66 +63,17 @@ export default function Login() {
             </p>
           )}
 
-          <div className="mt-10">
-            {data.members.length === 0 ? (
-              <EmptyState
-                icon="user"
-                title="Aucun profil enregistré pour l'instant."
-                text="Sois le premier membre du club : l'inscription prend moins de deux minutes."
-                action={
-                  <Button iconRight="arrowRight" onClick={() => navigate("/join")}>
-                    Rejoindre le club
-                  </Button>
-                }
-              />
-            ) : (
-              <ul className="grid gap-3">
-                {data.members.map((m) => (
-                  <li key={m.id}>
-                    <Card hover className="flex items-center gap-4 p-4">
-                      <span
-                        className={cn(
-                          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-2 text-[14px] font-semibold text-ink",
-                          m.status === "SUSPENDED" && "opacity-50",
-                        )}
-                      >
-                        {initials(m)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-medium text-ink">
-                          {m.firstName} {m.lastName}
-                          {m.role === "ADMIN" && (
-                            <span className="label-mono ml-2 text-brand-ink">admin</span>
-                          )}
-                        </p>
-                        <p className="label-mono mt-1.5 text-faint">
-                          {m.level} · membre depuis {formatDate(m.createdAt)}
-                          {m.status === "SUSPENDED" && " · suspendu"}
-                        </p>
-                      </div>
-                      {m.status === "SUSPENDED" ? (
-                        <span className="label-mono text-faint">Indisponible</span>
-                      ) : m.id === me?.id ? (
-                        <Button size="sm" variant="secondary" iconRight="arrowRight" onClick={() => navigate("/app")}>
-                          Mon espace
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          iconRight="arrowRight"
-                          loading={pending.signIn}
-                          onClick={() => enter(m.id)}
-                        >
-                          Entrer
-                        </Button>
-                      )}
-                    </Card>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <form className="mt-10 space-y-6" onSubmit={(event) => { event.preventDefault(); void enter(); }}>
+            <Field label="Email" required>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+            </Field>
+            <Field label="Mot de passe" required>
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+            </Field>
+            <Button type="submit" iconRight="arrowRight" loading={pending.signIn}>
+              Se connecter
+            </Button>
+          </form>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2">
             <Note>
