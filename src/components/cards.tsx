@@ -261,11 +261,13 @@ export function IdeaCard({
             <button
               type="button"
               onClick={onVote}
+              disabled={hasVoted}
               aria-pressed={hasVoted}
+              aria-label={hasVoted ? "Vote déjà enregistré" : "Voter pour cette proposition"}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-all duration-200",
                 hasVoted
-                  ? "border-brand bg-brand-soft text-brand-ink"
+                  ? "cursor-not-allowed border-brand bg-brand-soft text-brand-ink"
                   : "border-line bg-surface text-muted hover:border-ink/25 hover:text-ink",
               )}
             >

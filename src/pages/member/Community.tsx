@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IdeaCard, RuleCard } from "@/components/cards";
 import {
   Badge,
@@ -24,10 +24,28 @@ import { PageHeader } from "@/pages/member/Shell";
 ================================================================== */
 
 export function IdeasPage() {
-  const { data, me, createIdea, voteIdea } = useClub();
+  const { data, me, createIdea, voteIdea, toast } = useClub();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", category: "session" as Idea["category"] });
   const [error, setError] = useState<string | null>(null);
+  const knownIdeaIds = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    const currentIds = new Set(data.ideas.map((idea) => idea.id));
+    if (!knownIdeaIds.current) {
+      knownIdeaIds.current = currentIds;
+      return;
+    }
+    const newIdea = data.ideas.find((idea) => !knownIdeaIds.current?.has(idea.id) && idea.authorId !== me?.id);
+    if (newIdea) {
+      toast({
+        title: "Nouvelle proposition dans la communauté.",
+        description: newIdea.title,
+        tone: "info",
+      });
+    }
+    knownIdeaIds.current = currentIds;
+  }, [data.ideas, me?.id, toast]);
 
   const ideas = useMemo(
     () => [...data.ideas].sort((a, b) => b.votes.length - a.votes.length || b.createdAt.localeCompare(a.createdAt)),
@@ -66,8 +84,8 @@ export function IdeasPage() {
 
       <Reveal>
         <Note>
-          <strong className="font-medium text-ink">Un vote par idée et par membre.</strong> Tu peux retirer ton vote à
-          tout moment en recliquant. Les idées les plus votées sont examinées par le bureau du club.
+          <strong className="font-medium text-ink">Un seul vote par idée et par membre.</strong> Après ton vote, il ne
+          peut plus être modifié. Les idées les plus votées sont examinées par le bureau du club.
         </Note>
       </Reveal>
 

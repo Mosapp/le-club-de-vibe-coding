@@ -269,6 +269,19 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   useEffect(() => save(data), [data]);
 
   useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== DATA_KEY || !event.newValue) return;
+      try {
+        setData(JSON.parse(event.newValue) as Data);
+      } catch {
+        /* donnée locale invalide : on conserve l'état courant */
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  useEffect(() => {
     try {
       if (sessionId) localStorage.setItem(SESSION_KEY, sessionId);
       else localStorage.removeItem(SESSION_KEY);
@@ -583,21 +596,19 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const voteIdea: Ctx["voteIdea"] = useCallback(
     (id) => {
       const m = requireMember();
-      let already = false;
+      const idea = data.ideas.find((item) => item.id === id);
+      if (!idea) throw new ApiError("Proposition introuvable.");
+      if (idea.votes.includes(m.id)) throw new ApiError("Tu as déjà voté pour cette proposition.");
       setData((prev) => ({
         ...prev,
         ideas: prev.ideas.map((idea) => {
           if (idea.id !== id) return idea;
-          already = idea.votes.includes(m.id);
-          return {
-            ...idea,
-            votes: already ? idea.votes.filter((v) => v !== m.id) : [...idea.votes, m.id],
-          };
+          return { ...idea, votes: [...idea.votes, m.id] };
         }),
       }));
-      if (already) toast({ title: "Vote retiré.", tone: "info" });
+      toast({ title: "Vote enregistré.", description: "Tu ne peux voter qu'une seule fois pour cette proposition.", tone: "success" });
     },
-    [requireMember, toast],
+    [data.ideas, requireMember, toast],
   );
 
   const setIdeaStatus: Ctx["setIdeaStatus"] = useCallback(
