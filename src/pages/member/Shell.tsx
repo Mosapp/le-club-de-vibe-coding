@@ -61,7 +61,7 @@ export function MemberShell({
   const isActive = (r: string) => (r === "/app" ? route === "/app" : route.startsWith(r));
 
   return (
-    <div className="min-h-screen bg-paper lg:flex">
+    <div className="min-h-dvh bg-paper lg:flex">
       {/* ---------------- sidebar desktop ---------------- */}
       <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-line bg-surface px-5 py-6 lg:flex">
         <Logo />
@@ -197,7 +197,7 @@ export function MemberShell({
       </div>
 
       {/* ---------------- nav mobile bas ---------------- */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
         {NAV_ITEMS.filter((i) => i.mobile).map((item) => (
           <a
             key={item.route}

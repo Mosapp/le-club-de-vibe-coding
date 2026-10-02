@@ -15,16 +15,16 @@
    Voir MEDIA_GUIDE.md pour les dimensions recommandées.
 ------------------------------------------------------------------ */
 
-import heroImg from "@/media/hero/hero.jpg";
-import vibeImg from "@/media/vibe/vibe-explainer.jpg";
-import community01 from "@/media/community/community-01.jpg";
-import community02 from "@/media/community/community-02.jpg";
-import community03 from "@/media/community/community-03.jpg";
-import project01 from "@/media/projects/project-01.jpg";
-import project02 from "@/media/projects/project-02.jpg";
-import project03 from "@/media/projects/project-03.jpg";
-import session01 from "@/media/sessions/session-01.jpg";
-import challenge01 from "@/media/challenges/challenge-01.jpg";
+import heroImg from "@/media/hero/hero.webp";
+import vibeImg from "@/media/vibe/vibe-explainer.webp";
+import community01 from "@/media/community/community-01.webp";
+import community02 from "@/media/community/community-02.webp";
+import community03 from "@/media/community/community-03.webp";
+import project01 from "@/media/projects/project-01.webp";
+import project02 from "@/media/projects/project-02.webp";
+import project03 from "@/media/projects/project-03.webp";
+import session01 from "@/media/sessions/session-01.webp";
+import challenge01 from "@/media/challenges/challenge-01.webp";
 
 export type MediaRatio = "4/5" | "3/4" | "1/1" | "4/3" | "16/10" | "16/9" | "3/2";
 

@@ -25,7 +25,7 @@ export default function Login() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
       <aside className="relative hidden overflow-hidden bg-ink lg:block">
         <MediaSlot slot="COMMUNITY_MEDIA_02" ratio="3/4" rounded="rounded-none" className="h-full" />
         <div aria-hidden="true" className="absolute inset-0 bg-ink/50" />

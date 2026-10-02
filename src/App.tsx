@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Button } from "@/components/ui";
 import { Toaster } from "@/components/ui";
 import { ClubProvider, useClub } from "@/lib/store";
@@ -7,22 +7,34 @@ import { PageFade } from "@/lib/motion";
 import Landing from "@/pages/Landing";
 import Join from "@/pages/Join";
 import Login from "@/pages/Login";
-import { MemberShell } from "@/pages/member/Shell";
-import MemberHome from "@/pages/member/Home";
-import ProjectsPage from "@/pages/member/Projects";
-import { ChallengesPage, SessionsPage } from "@/pages/member/Participate";
-import { IdeasPage, RulesPage } from "@/pages/member/Community";
-import ProfilePage from "@/pages/member/Profile";
-import { AdminShell } from "@/pages/admin/Shell";
-import { AdminDashboard, AdminMembers } from "@/pages/admin/Overview";
-import {
-  AdminChallenges,
-  AdminIdeas,
-  AdminMedia,
-  AdminProjects,
-  AdminRules,
-  AdminSessions,
-} from "@/pages/admin/Manage";
+
+/* Chargement à la demande : l'espace membre et l'admin ne sont
+   téléchargés que lorsque la personne y accède. */
+const MemberShell = lazy(() => import("@/pages/member/Shell").then((m) => ({ default: m.MemberShell })));
+const MemberHome = lazy(() => import("@/pages/member/Home"));
+const ProjectsPage = lazy(() => import("@/pages/member/Projects"));
+const ChallengesPage = lazy(() => import("@/pages/member/Participate").then((m) => ({ default: m.ChallengesPage })));
+const SessionsPage = lazy(() => import("@/pages/member/Participate").then((m) => ({ default: m.SessionsPage })));
+const IdeasPage = lazy(() => import("@/pages/member/Community").then((m) => ({ default: m.IdeasPage })));
+const RulesPage = lazy(() => import("@/pages/member/Community").then((m) => ({ default: m.RulesPage })));
+const ProfilePage = lazy(() => import("@/pages/member/Profile"));
+const AdminShell = lazy(() => import("@/pages/admin/Shell").then((m) => ({ default: m.AdminShell })));
+const AdminDashboard = lazy(() => import("@/pages/admin/Overview").then((m) => ({ default: m.AdminDashboard })));
+const AdminMembers = lazy(() => import("@/pages/admin/Overview").then((m) => ({ default: m.AdminMembers })));
+const AdminChallenges = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminChallenges })));
+const AdminIdeas = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminIdeas })));
+const AdminMedia = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminMedia })));
+const AdminProjects = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminProjects })));
+const AdminRules = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminRules })));
+const AdminSessions = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminSessions })));
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-paper" role="status" aria-label="Chargement">
+      <span className="spin h-6 w-6 rounded-full border-2 border-line border-t-brand" />
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------
    ROUTES
@@ -36,7 +48,7 @@ import {
 
 function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-paper px-6 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-paper px-6 text-center">
       <p className="label-mono text-faint">Erreur 404</p>
       <h1 className="mt-5 text-[clamp(1.8rem,5vw,2.8rem)] font-semibold leading-tight text-ink">
         Cette page n'existe pas.
@@ -166,7 +178,9 @@ function Shell() {
   return (
     <>
       <PageFade key={path}>
-        <Routes />
+        <Suspense fallback={<PageLoader />}>
+          <Routes />
+        </Suspense>
       </PageFade>
       <Toaster toasts={toasts} onDismiss={dismissToast} />
     </>

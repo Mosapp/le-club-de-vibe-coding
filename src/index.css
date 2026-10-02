@@ -301,3 +301,26 @@
     clip-path: none;
   }
 }
+
+/* ------------------- MOBILE : fluidité & confort ------------------- */
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 767px) {
+  /* 16 px minimum : évite le zoom automatique d'iOS dans les champs */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (hover: none) {
+  /* Pas d'effet "soulevé" au toucher : moins de repaints sur mobile */
+  .hover\:-translate-y-1:hover,
+  .group:hover .group-hover\:-translate-y-0\.5 {
+    transform: none;
+  }
+}

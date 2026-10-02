@@ -108,7 +108,7 @@ function Hero() {
               </div>
 
               {/* carte flottante : contenu réel du club */}
-              <div className="absolute -bottom-6 left-4 w-[calc(100%-2rem)] max-w-[290px] rounded-xl border border-line bg-surface/95 p-4 shadow-[0_18px_45px_-28px_rgba(23,23,23,0.5)] backdrop-blur-sm sm:left-6">
+              <div className="absolute -bottom-6 left-4 w-[calc(100%-2rem)] max-w-[290px] rounded-xl border border-line bg-surface/95 p-4 shadow-[0_18px_45px_-28px_rgba(23,23,23,0.5)] md:backdrop-blur-sm sm:left-6">
                 <div className="flex items-center justify-between">
                   <span className="label-mono text-brand-ink">{CHALLENGES_SECTION.programme[0].code}</span>
                   <Badge tone="outline">{CHALLENGES_SECTION.programme[0].status}</Badge>
@@ -288,7 +288,7 @@ function VibeCodingSection() {
               <p className="mt-6 max-w-md text-[15.5px] leading-relaxed text-white/60">{VIBE_CODING.intro}</p>
             </Reveal>
             <Reveal delay={180} className="mt-9">
-              <div className="overflow-hidden rounded-lg border border-white/20 bg-white/[0.06] shadow-[0_24px_80px_-40px_rgba(176,206,226,0.5)] backdrop-blur-md">
+              <div className="overflow-hidden rounded-lg border border-white/20 bg-white/[0.06] shadow-[0_24px_80px_-40px_rgba(176,206,226,0.5)] md:backdrop-blur-md">
                 <MediaSlot slot={VIBE_CODING.mediaSlot} rounded="rounded-none" />
               </div>
               <p className="label-mono mt-3 text-white/35">
@@ -298,9 +298,9 @@ function VibeCodingSection() {
           </div>
 
           <div className="lg:col-span-7">
-            <ol className="grid gap-px overflow-hidden rounded-lg border border-white/20 bg-white/[0.12] shadow-[0_24px_80px_-40px_rgba(176,206,226,0.45)] backdrop-blur-xl sm:grid-cols-2">
+            <ol className="grid gap-px overflow-hidden rounded-lg border border-white/20 bg-white/[0.12] shadow-[0_24px_80px_-40px_rgba(176,206,226,0.45)] md:backdrop-blur-xl sm:grid-cols-2">
               {VIBE_CODING.steps.map((step, i) => (
-                <Reveal as="li" key={step.n} delay={i * 70} className="bg-[#1a2730]/65 backdrop-blur-md">
+                <Reveal as="li" key={step.n} delay={i * 70} className="bg-[#1a2730]/65 md:backdrop-blur-md">
                   <div className="group h-full p-6 transition-colors duration-300 hover:bg-white/[0.09] md:p-8">
                     <span className="label-mono text-brand">{step.n}</span>
                     <h3 className="mt-5 text-[20px] font-semibold leading-tight text-white">{step.title}</h3>
@@ -310,7 +310,7 @@ function VibeCodingSection() {
               ))}
             </ol>
             <Reveal delay={280}>
-              <div className="mt-8 flex flex-col gap-4 rounded-lg border border-white/20 bg-white/[0.08] p-6 shadow-[0_20px_70px_-40px_rgba(176,206,226,0.55)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between md:p-7">
+              <div className="mt-8 flex flex-col gap-4 rounded-lg border border-white/20 bg-white/[0.08] p-6 shadow-[0_20px_70px_-40px_rgba(176,206,226,0.55)] md:backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between md:p-7">
                 <p className="max-w-sm text-[15px] leading-relaxed text-white/70">
                   Tu ne sais pas coder ? C'est exactement pour ça que le club existe.
                 </p>
@@ -621,7 +621,7 @@ function CtaSection() {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-dvh bg-paper">
       <Navbar />
       <main>
         <Hero />

@@ -106,7 +106,7 @@ export default function Join() {
   /* -------------------------- ÉCRAN DE SUCCÈS -------------------------- */
   if (done) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-paper px-5 py-16">
+      <div className="flex min-h-dvh items-center justify-center bg-paper px-5 py-16">
         <div className="anim-pop w-full max-w-lg text-center">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-brand/25 bg-brand-soft">
             <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" aria-hidden="true">
@@ -140,7 +140,7 @@ export default function Join() {
 
   /* ------------------------------ FORMULAIRE ------------------------------ */
   return (
-    <div className="grid min-h-screen lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
       {/* panneau visuel */}
       <aside className="relative hidden overflow-hidden bg-ink lg:block">
         <MediaSlot slot="COMMUNITY_MEDIA_03" ratio="3/4" rounded="rounded-none" className="h-full" />

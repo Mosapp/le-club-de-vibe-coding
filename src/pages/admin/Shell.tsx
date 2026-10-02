@@ -36,7 +36,7 @@ function AdminGate() {
   const { me } = useClub();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-5 py-16">
+    <div className="flex min-h-dvh items-center justify-center bg-paper px-5 py-16">
       <div className="w-full max-w-lg">
         <Logo />
         <Card className="mt-8 p-7 md:p-9">
@@ -96,7 +96,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const isActive = (r: string) => (r === "/admin" ? route === "/admin" : route.startsWith(r));
 
   return (
-    <div className="min-h-screen bg-paper lg:flex">
+    <div className="min-h-dvh bg-paper lg:flex">
       <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col bg-ink px-5 py-6 lg:flex">
         <Logo dark />
 
