@@ -217,7 +217,7 @@ export function Footer() {
           <p className="label-mono text-faint">
             © {new Date().getFullYear()} {BRAND.name}
           </p>
-          <p className="label-mono text-faint">Less effects. More personality.</p>
+          <p className="label-mono text-faint">Built with AI. Made by the club.</p>
         </div>
       </div>
     </footer>

@@ -390,5 +390,5 @@ export const FOOTER = {
       ],
     },
   ],
-  note: "Les visuels du site sont remplaçables en un seul endroit : src/config/media.ts.",
+  note: "Une communauté ouverte à tous les niveaux : on apprend, on crée, on partage.",
 };

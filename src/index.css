@@ -324,3 +324,160 @@
     transform: none;
   }
 }
+
+
+/* ==================================================================
+   THEME SOMBRE (page d'accueil)
+   On redéfinit uniquement les variables de couleur : tous les
+   composants existants (boutons, cartes, badges…) s'adaptent seuls.
+   L'espace membre et l'admin gardent le thème clair.
+================================================================== */
+
+.theme-dark {
+  color-scheme: dark;
+  --color-paper: #070b10;
+  --color-surface: #0d151d;
+  --color-surface-2: #111b25;
+  --color-ink: #f2f6f9;
+  --color-ink-2: #cdd8e0;
+  --color-muted: #a3b3c1;
+  --color-faint: #71859a;
+  --color-line: #1f2d3a;
+  --color-line-2: #16222d;
+  --color-brand: #f0662f;
+  --color-brand-ink: #ff8f61;
+  --color-brand-soft: #34190f;
+  --color-violet: #6cb8f2;
+  --color-violet-soft: #0f2a3d;
+  --color-deep: #cfe3f1;
+  --color-moss: #9fb3c4;
+}
+
+body:has(.theme-dark) {
+  background-color: #070b10;
+}
+
+.theme-dark .hover\:bg-white:hover {
+  background-color: #172431;
+}
+
+.theme-dark .paper-grain {
+  background-image: radial-gradient(circle at 1px 1px, rgba(176, 206, 226, 0.07) 1px, transparent 0);
+}
+
+.theme-dark ::selection {
+  background: rgba(240, 102, 47, 0.45);
+  color: #fff;
+}
+
+/* ---------------------------- HERO ---------------------------- */
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(176, 206, 226, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(176, 206, 226, 0.07) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 28%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 28%, #000 25%, transparent 78%);
+}
+
+.hero-glow {
+  background:
+    radial-gradient(42% 38% at 12% 12%, rgba(240, 102, 47, 0.3), transparent 72%),
+    radial-gradient(40% 42% at 88% 28%, rgba(60, 150, 230, 0.26), transparent 72%);
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #ff8f61 0%, #f0662f 30%, #7cc4ff 70%, #ff8f61 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: vc-shine 7s linear infinite;
+}
+
+/* Fenêtre "terminal" avec bordure dégradée orange → bleu */
+.neon-window {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#0b121a, #0b121a) padding-box,
+    linear-gradient(140deg, rgba(240, 102, 47, 0.85), rgba(108, 184, 242, 0.55) 55%, rgba(240, 102, 47, 0.12)) border-box;
+}
+
+.neon-frame {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#0b121a, #0b121a) padding-box,
+    linear-gradient(160deg, rgba(108, 184, 242, 0.8), rgba(240, 102, 47, 0.6)) border-box;
+}
+
+.term-line {
+  opacity: 0;
+  animation: vc-line 0.55s ease-out forwards;
+}
+
+.term-cursor::after {
+  content: "▍";
+  margin-left: 2px;
+  color: var(--color-brand);
+  animation: vc-blink 1s steps(1) infinite;
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: vc-marquee 40s linear infinite;
+}
+
+.float-slow {
+  animation: vc-float 7s ease-in-out infinite;
+}
+
+@keyframes vc-shine {
+  to {
+    background-position: 220% center;
+  }
+}
+@keyframes vc-line {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes vc-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes vc-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes vc-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .text-gradient,
+  .float-slow,
+  .term-cursor::after {
+    animation: none !important;
+  }
+  .term-line {
+    opacity: 1;
+    transform: none;
+  }
+}

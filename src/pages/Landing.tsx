@@ -20,35 +20,43 @@ import { useClub } from "@/lib/store";
 import { useEffect, useRef } from "react";
 
 /* ==================================================================
-   HERO — la force vient de la composition, pas des effets.
+   HERO — sombre, spectaculaire : grille, lueurs, fenêtre de code animée
 ================================================================== */
+
+const TERMINAL_LINES = [
+  { text: "Une app pour suivre les défis du club", kind: "prompt" },
+  { text: "Structure du projet créée", kind: "ok" },
+  { text: "Interface responsive générée", kind: "ok" },
+  { text: "Base de données connectée", kind: "ok" },
+  { text: "Mise en ligne…", kind: "run" },
+] as const;
 
 function Hero() {
   const { me } = useClub();
+  const marquee = [...PRINCIPLES, ...PRINCIPLES, ...PRINCIPLES, ...PRINCIPLES];
   return (
-    <section className="relative overflow-hidden pt-[104px] pb-14 md:pt-[132px] md:pb-20 lg:pb-28">
-      {/* aplat discret pour asseoir la composition */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-white to-transparent"
-      />
-      <div className="container-x relative grid items-center gap-12 lg:grid-cols-12 lg:gap-14">
+    <section className="relative overflow-hidden pt-[104px] pb-0 md:pt-[136px]">
+      <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
+      <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0" />
+
+      <div className="container-x relative grid items-center gap-16 lg:grid-cols-12 lg:gap-12">
         {/* -------- gauche -------- */}
         <div className="lg:col-span-6">
           <Reveal>
-            <span className="label-mono inline-flex items-center gap-2.5 rounded-full border border-line bg-surface px-3.5 py-2 text-muted">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inset-0 rounded-full bg-brand" />
+            <span className="label-mono inline-flex items-center gap-2.5 rounded-full border border-line bg-surface/70 px-3.5 py-2 text-muted">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-60" />
+                <span className="relative h-2 w-2 rounded-full bg-brand" />
               </span>
               {HERO.badge}
             </span>
           </Reveal>
 
           <Reveal delay={70}>
-            <h1 className="mt-7 text-[clamp(2.05rem,7.4vw,4.5rem)] font-semibold leading-[0.96] tracking-[-0.035em] text-ink">
+            <h1 className="mt-7 text-[clamp(2.1rem,7.2vw,4.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-ink">
               {HERO.titleLines[0]}
               <br />
-              AVEC <span className="accent-serif text-brand">{HERO.titleAccent.toLowerCase()}</span>
+              AVEC <span className="text-gradient">{HERO.titleAccent}</span>
             </h1>
           </Reveal>
 
@@ -58,7 +66,12 @@ function Hero() {
 
           <Reveal delay={210}>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Button size="lg" iconRight="arrowRight" onClick={() => navigate(me ? "/app" : "/join")}>
+              <Button
+                size="lg"
+                iconRight="arrowRight"
+                className="shadow-[0_0_32px_-6px_rgba(240,102,47,0.65)]"
+                onClick={() => navigate(me ? "/app" : "/join")}
+              >
                 {me ? "Mon espace" : HERO.primaryCta}
               </Button>
               <Button size="lg" variant="secondary" onClick={() => navigate(HERO.secondaryHref)}>
@@ -69,7 +82,7 @@ function Hero() {
               href={WHATSAPP_GROUP_URL}
               target="_blank"
               rel="noreferrer"
-              className="mt-4 inline-flex items-center gap-2 text-[14px] font-medium text-brand-ink underline decoration-brand/40 underline-offset-4 transition-colors hover:text-brand"
+              className="mt-5 inline-flex items-center gap-2 text-[14px] font-medium text-brand-ink underline decoration-brand/40 underline-offset-4 transition-colors hover:text-brand"
             >
               Rejoindre le groupe WhatsApp
               <Icon name="arrowUpRight" className="h-4 w-4" />
@@ -77,11 +90,13 @@ function Hero() {
           </Reveal>
 
           <Reveal delay={280}>
-            <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-line pt-6">
-              <span className="label-mono text-faint">Ce que tu y trouves</span>
+            <div className="mt-9 flex flex-wrap items-center gap-2.5">
               {["Sessions de travail", "Défis courts", "Mur des créations"].map((item) => (
-                <span key={item} className="inline-flex items-center gap-1.5 text-[13.5px] text-muted">
-                  <Icon name="check" className="h-4 w-4 text-brand" />
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 py-1.5 text-[13px] text-muted"
+                >
+                  <Icon name="check" className="h-3.5 w-3.5 text-brand" />
                   {item}
                 </span>
               ))}
@@ -89,26 +104,46 @@ function Hero() {
           </Reveal>
         </div>
 
-        {/* -------- droite : LE visuel fort -------- */}
+        {/* -------- droite : fenêtre de code animée -------- */}
         <div className="lg:col-span-6">
-          <Reveal delay={110} className="relative">
-            <div className="group relative">
-              {/* cadre décalé, façon éditorial */}
-              <div
-                aria-hidden="true"
-                className="absolute -bottom-4 -right-4 h-full w-full rounded-lg border border-line bg-surface"
-              />
-              <div className="relative overflow-hidden rounded-lg border border-line">
-                <MediaSlot slot={HERO.mediaSlot} priority rounded="rounded-none" zoomOnHover />
-                {/* léger voile pour la lisibilité du badge */}
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/22 via-transparent to-transparent"
-                />
+          <Reveal delay={110}>
+            <div className="relative mx-auto mb-10 w-full max-w-[560px] lg:mb-8 lg:max-w-none">
+              <div className="neon-window overflow-hidden rounded-2xl shadow-[0_40px_110px_-40px_rgba(240,102,47,0.45)]">
+                <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-violet" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-white/30" />
+                  <span className="label-mono ml-3 text-faint">claude — mon-projet</span>
+                </div>
+                <div className="space-y-3.5 px-5 pb-28 pt-6 font-mono text-[13px] leading-relaxed md:px-7 md:pt-8 md:text-[14px]">
+                  {TERMINAL_LINES.map((line, i) => (
+                    <p
+                      key={line.text}
+                      className={`term-line flex items-start gap-3 ${
+                        line.kind === "prompt" ? "text-ink" : line.kind === "ok" ? "text-muted" : "term-cursor text-brand-ink"
+                      }`}
+                      style={{ animationDelay: `${600 + i * 650}ms` }}
+                    >
+                      <span
+                        className={
+                          line.kind === "prompt" ? "text-violet" : line.kind === "ok" ? "text-brand" : "text-brand-ink"
+                        }
+                      >
+                        {line.kind === "prompt" ? "›" : line.kind === "ok" ? "✓" : "▸"}
+                      </span>
+                      <span>{line.text}</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* photo du club (emplacement HERO_MEDIA, modifiable depuis l'admin) */}
+              <div className="neon-frame float-slow absolute -right-3 -top-10 hidden w-[30%] max-w-[168px] overflow-hidden rounded-xl shadow-[0_20px_60px_-20px_rgba(108,184,242,0.5)] sm:block lg:-right-6">
+                <MediaSlot slot={HERO.mediaSlot} priority rounded="rounded-none" />
               </div>
 
               {/* carte flottante : contenu réel du club */}
-              <div className="absolute -bottom-6 left-4 w-[calc(100%-2rem)] max-w-[290px] rounded-xl border border-line bg-surface/95 p-4 shadow-[0_18px_45px_-28px_rgba(23,23,23,0.5)] md:backdrop-blur-sm sm:left-6">
+              <div className="absolute -bottom-8 left-3 w-[calc(100%-1.5rem)] max-w-[290px] rounded-xl border border-line bg-surface/95 p-4 shadow-[0_18px_45px_-20px_rgba(0,0,0,0.8)] sm:left-6 md:backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <span className="label-mono text-brand-ink">{CHALLENGES_SECTION.programme[0].code}</span>
                   <Badge tone="outline">{CHALLENGES_SECTION.programme[0].status}</Badge>
@@ -127,16 +162,14 @@ function Hero() {
         </div>
       </div>
 
-      {/* bandeau de principes */}
-      <div className="container-x relative mt-20 lg:mt-28">
-        <div className="grid gap-3 border-t border-line pt-7 sm:grid-cols-2 lg:grid-cols-3">
-          {PRINCIPLES.map((p, i) => (
-            <Reveal key={p} delay={i * 50}>
-              <span className="flex items-center gap-2.5 text-[14px] text-muted">
-                <span className="h-1 w-1 rounded-full bg-violet" />
-                {p}
-              </span>
-            </Reveal>
+      {/* bandeau défilant des principes */}
+      <div aria-hidden="true" className="relative mt-20 overflow-hidden border-y border-line bg-surface/50 py-4 lg:mt-24">
+        <div className="marquee-track">
+          {marquee.map((p, i) => (
+            <span key={`${p}-${i}`} className="label-mono flex shrink-0 items-center gap-10 pr-10 text-muted">
+              {p}
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+            </span>
           ))}
         </div>
       </div>
@@ -291,9 +324,6 @@ function VibeCodingSection() {
               <div className="overflow-hidden rounded-lg border border-white/20 bg-white/[0.06] shadow-[0_24px_80px_-40px_rgba(176,206,226,0.5)] md:backdrop-blur-md">
                 <MediaSlot slot={VIBE_CODING.mediaSlot} rounded="rounded-none" />
               </div>
-              <p className="label-mono mt-3 text-white/35">
-                Emplacement VIBE_CODING_MEDIA — image ou vidéo remplaçable
-              </p>
             </Reveal>
           </div>
 
@@ -469,9 +499,6 @@ function ChallengesSection() {
               <MediaSlot slot={CHALLENGES_SECTION.mediaSlot} rounded="rounded-none" zoomOnHover />
             </div>
           </Reveal>
-          <Reveal delay={140}>
-            <p className="label-mono mt-3 text-faint">Emplacement CHALLENGE_MEDIA</p>
-          </Reveal>
         </div>
 
         <div className="grid gap-4 self-start lg:col-span-7">
@@ -621,7 +648,7 @@ function CtaSection() {
 
 export default function Landing() {
   return (
-    <div className="min-h-dvh bg-paper">
+    <div className="theme-dark min-h-dvh bg-paper text-ink">
       <Navbar />
       <main>
         <Hero />
