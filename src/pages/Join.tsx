@@ -106,14 +106,16 @@ export default function Join() {
   /* -------------------------- ÉCRAN DE SUCCÈS -------------------------- */
   if (done) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-paper px-5 py-16">
-        <div className="anim-pop w-full max-w-lg text-center">
+      <div className="theme-dark theme-dark-page relative flex min-h-dvh items-center justify-center overflow-hidden bg-paper px-5 py-16 text-ink">
+        <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
+        <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0" />
+        <div className="anim-pop relative w-full max-w-lg text-center">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-brand/25 bg-brand-soft">
             <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" aria-hidden="true">
               <path
                 className="check-path"
                 d="M5 13l4 4L19 7"
-                stroke="#a63e1b"
+                stroke="#ff8f61"
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -140,16 +142,16 @@ export default function Join() {
 
   /* ------------------------------ FORMULAIRE ------------------------------ */
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+    <div className="theme-dark theme-dark-page grid min-h-dvh bg-paper text-ink lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
       {/* panneau visuel */}
-      <aside className="relative hidden overflow-hidden bg-ink lg:block">
+      <aside className="relative hidden overflow-hidden bg-[#05080c] lg:block">
         <MediaSlot slot="COMMUNITY_MEDIA_03" ratio="3/4" rounded="rounded-none" className="h-full" />
-        <div aria-hidden="true" className="absolute inset-0 bg-ink/45" />
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#05080c] via-[#05080c]/55 to-[#05080c]/25" />
         <div className="absolute inset-0 flex flex-col justify-between p-10">
           <Logo dark />
           <div className="max-w-sm">
             <p className="text-[26px] font-semibold leading-[1.15] text-white">
-              Cinq questions, <span className="accent-serif text-brand">et c'est parti.</span>
+              Cinq questions, <span className="text-gradient">et c'est parti.</span>
             </p>
             <p className="mt-4 text-[14.5px] leading-relaxed text-white/60">
               Aucune compétence à prouver, aucun CV à envoyer. On veut juste savoir ce que tu as envie de construire.
@@ -159,7 +161,9 @@ export default function Join() {
       </aside>
 
       {/* formulaire */}
-      <main className="flex flex-col px-5 py-8 md:px-10 lg:px-16 lg:py-12">
+      <main className="relative isolate flex flex-col px-5 py-8 md:px-10 lg:px-16 lg:py-12">
+        <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0 -z-10" />
+        <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0 -z-10" />
         <div className="flex items-center justify-between lg:hidden">
           <Logo />
           <button
@@ -192,9 +196,9 @@ export default function Join() {
                     className={cn(
                       "flex h-4 w-4 items-center justify-center rounded-full border text-[9px] font-medium transition-colors duration-300",
                       i < step
-                        ? "border-moss bg-moss text-white"
+                        ? "border-brand/50 bg-brand-soft text-brand-ink"
                         : i === step
-                          ? "border-ink bg-ink text-white"
+                          ? "border-brand bg-brand text-white"
                           : "border-line bg-surface text-faint",
                     )}
                   >
@@ -307,8 +311,8 @@ export default function Join() {
                         className={cn(
                           "flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200",
                           form.engagement === eng.value
-                            ? "border-ink bg-surface shadow-[0_10px_28px_-22px_rgba(23,23,23,0.5)]"
-                            : "border-line bg-surface hover:border-ink/25",
+                            ? "border-brand bg-brand-soft shadow-[0_0_0_4px_rgba(240,102,47,0.12)]"
+                            : "border-line bg-surface hover:border-brand/40",
                         )}
                       >
                         <span
@@ -331,7 +335,7 @@ export default function Join() {
             </div>
 
             {serverError && (
-              <p className="mt-7 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-700">
+              <p className="field-dark-error mt-7 flex items-center gap-2 rounded-xl border px-4 py-3 text-[14px]">
                 <Icon name="close" className="h-4 w-4" />
                 {serverError}
               </p>

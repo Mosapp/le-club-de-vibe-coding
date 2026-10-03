@@ -1,3 +1,4 @@
+import { haptic } from "@/lib/haptics";
 import {
   useEffect,
   useRef,
@@ -115,7 +116,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand text-white border border-brand hover:bg-[#a63e1b] hover:border-[#a63e1b] shadow-[0_1px_2px_rgba(26,39,48,0.06)] hover:shadow-[0_8px_20px_-8px_rgba(233,93,44,0.42)]",
+    "bg-brand text-white border border-brand hover:bg-[#cf4a1c] hover:border-[#cf4a1c] shadow-[0_6px_18px_-8px_rgba(233,93,44,0.55)] hover:shadow-[0_12px_28px_-10px_rgba(233,93,44,0.6)] hover:-translate-y-px",
   secondary: "bg-surface text-ink border border-line hover:border-ink/25 hover:bg-white",
   dark: "bg-ink text-white border border-ink hover:bg-ink-2",
   ghost: "bg-transparent text-ink border border-transparent hover:bg-ink/5",
@@ -139,11 +140,16 @@ export function Button({
   className,
   children,
   disabled,
+  onClick,
   ...rest
 }: ButtonProps) {
   return (
     <button
       {...rest}
+      onClick={(event) => {
+        haptic();
+        onClick?.(event);
+      }}
       disabled={disabled || loading}
       className={cn(
         "group inline-flex items-center justify-center rounded-xl font-medium tracking-[-0.01em]",
@@ -188,7 +194,7 @@ export function Badge({
   const tones = {
     neutral: "bg-ink/5 text-muted",
     brand: "bg-brand-soft text-brand-ink",
-    violet: "bg-violet-soft text-violet",
+    violet: "bg-violet-soft text-deep",
     moss: "bg-[#eaf2ec] text-moss",
     deep: "bg-[#e8eff4] text-deep",
     outline: "border border-line text-muted bg-surface",
@@ -246,7 +252,7 @@ export function Card({
   return (
     <Tag
       className={cn(
-        "rounded-card border border-line bg-surface",
+        "rounded-card border border-line bg-surface shadow-[0_1px_2px_rgba(16,32,44,0.04)]",
         hover && "transition-all duration-300 ease-out hover:-translate-y-1 hover:border-ink/15 hover:shadow-[0_18px_40px_-24px_rgba(23,23,23,0.25)]",
         className,
       )}
@@ -349,7 +355,7 @@ export function Input({ invalid, className, ...rest }: InputHTMLAttributes<HTMLI
       className={cn(
         inputBase,
         "h-12",
-        invalid ? "border-red-300 focus:border-red-400" : "border-line focus:border-ink/40",
+        invalid ? "border-red-300 focus:border-red-400" : "border-line focus:border-brand/60 focus:shadow-[0_0_0_4px_rgba(240,102,47,0.13)]",
         className,
       )}
     />
@@ -384,7 +390,7 @@ export function Textarea({
       className={cn(
         inputBase,
         "min-h-28 resize-y py-3 leading-relaxed",
-        invalid ? "border-red-300 focus:border-red-400" : "border-line focus:border-ink/40",
+        invalid ? "border-red-300 focus:border-red-400" : "border-line focus:border-brand/60 focus:shadow-[0_0_0_4px_rgba(240,102,47,0.13)]",
         className,
       )}
     />
@@ -404,7 +410,7 @@ export function Select({
         className={cn(
           inputBase,
           "h-12 appearance-none pr-10",
-          invalid ? "border-red-300" : "border-line focus:border-ink/40",
+          invalid ? "border-red-300" : "border-line focus:border-brand/60 focus:shadow-[0_0_0_4px_rgba(240,102,47,0.13)]",
           className,
         )}
       >
@@ -476,7 +482,7 @@ export function Stat({
   hint?: string;
   tone?: "ink" | "brand" | "violet" | "moss";
 }) {
-  const tones = { ink: "text-ink", brand: "text-brand-ink", violet: "text-violet", moss: "text-moss" } as const;
+  const tones = { ink: "text-ink", brand: "text-brand-ink", violet: "text-[#3b82c4]", moss: "text-moss" } as const;
   return (
     <div className="rounded-card border border-line bg-surface p-5">
       <div className="label-mono text-faint">{label}</div>
@@ -578,7 +584,7 @@ export function Toaster({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-4 bottom-4 z-[90] flex flex-col items-center gap-2.5 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:items-end"
+      className="pointer-events-none fixed inset-x-4 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-[90] flex flex-col items-center gap-2.5 sm:inset-x-auto sm:right-6 sm:top-auto sm:bottom-6 sm:items-end"
     >
       {toasts.map((t) => (
         <div

@@ -96,7 +96,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const isActive = (r: string) => (r === "/admin" ? route === "/admin" : route.startsWith(r));
 
   return (
-    <div className="min-h-dvh bg-paper lg:flex">
+    <div className="app-bg min-h-dvh lg:flex">
       <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col bg-ink px-5 py-6 lg:flex">
         <Logo dark />
 
@@ -112,7 +112,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               }}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition-colors duration-200",
-                isActive(item.route) ? "bg-white text-ink" : "text-white/60 hover:bg-white/8 hover:text-white",
+                isActive(item.route) ? "bg-white text-ink shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]" : "text-white/60 hover:bg-white/8 hover:text-white",
               )}
             >
               <Icon name={item.icon} className="h-[18px] w-[18px]" />

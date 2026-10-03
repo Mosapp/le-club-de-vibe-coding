@@ -18,26 +18,22 @@ import { navigate } from "@/lib/router";
 import { Reveal, RevealMask } from "@/lib/motion";
 import { useClub } from "@/lib/store";
 import { useEffect, useRef } from "react";
+import { RotatingWord, ScrollProgress, StickyJoinBar, TypeTerminal, useHeroMotion, useTouchGlow } from "@/components/fx";
 
 /* ==================================================================
    HERO — sombre, spectaculaire : grille, lueurs, fenêtre de code animée
 ================================================================== */
 
-const TERMINAL_LINES = [
-  { text: "Une app pour suivre les défis du club", kind: "prompt" },
-  { text: "Structure du projet créée", kind: "ok" },
-  { text: "Interface responsive générée", kind: "ok" },
-  { text: "Base de données connectée", kind: "ok" },
-  { text: "Mise en ligne…", kind: "run" },
-] as const;
-
 function Hero() {
   const { me } = useClub();
+  const heroRef = useRef<HTMLElement>(null);
+  useHeroMotion(heroRef);
   const marquee = [...PRINCIPLES, ...PRINCIPLES, ...PRINCIPLES, ...PRINCIPLES];
   return (
-    <section className="relative overflow-hidden pt-[104px] pb-0 md:pt-[136px]">
+    <section ref={heroRef} className="relative overflow-hidden pt-[104px] pb-0 md:pt-[136px]">
       <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
       <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0" />
+      <div aria-hidden="true" className="hero-spot pointer-events-none absolute inset-0" />
 
       <div className="container-x relative grid items-center gap-16 lg:grid-cols-12 lg:gap-12">
         {/* -------- gauche -------- */}
@@ -54,7 +50,9 @@ function Hero() {
 
           <Reveal delay={70}>
             <h1 className="mt-7 text-[clamp(2.1rem,7.2vw,4.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-ink">
-              {HERO.titleLines[0]}
+              APPRENDS À
+              <br />
+              <RotatingWord words={["CRÉER", "CODER", "LANCER", "INVENTER"]} />
               <br />
               AVEC <span className="text-gradient">{HERO.titleAccent}</span>
             </h1>
@@ -115,26 +113,7 @@ function Hero() {
                   <span className="h-2.5 w-2.5 rounded-full bg-white/30" />
                   <span className="label-mono ml-3 text-faint">claude — mon-projet</span>
                 </div>
-                <div className="space-y-3.5 px-5 pb-28 pt-6 font-mono text-[13px] leading-relaxed md:px-7 md:pt-8 md:text-[14px]">
-                  {TERMINAL_LINES.map((line, i) => (
-                    <p
-                      key={line.text}
-                      className={`term-line flex items-start gap-3 ${
-                        line.kind === "prompt" ? "text-ink" : line.kind === "ok" ? "text-muted" : "term-cursor text-brand-ink"
-                      }`}
-                      style={{ animationDelay: `${600 + i * 650}ms` }}
-                    >
-                      <span
-                        className={
-                          line.kind === "prompt" ? "text-violet" : line.kind === "ok" ? "text-brand" : "text-brand-ink"
-                        }
-                      >
-                        {line.kind === "prompt" ? "›" : line.kind === "ok" ? "✓" : "▸"}
-                      </span>
-                      <span>{line.text}</span>
-                    </p>
-                  ))}
-                </div>
+                <TypeTerminal />
               </div>
 
               {/* photo du club (emplacement HERO_MEDIA, modifiable depuis l'admin) */}
@@ -194,6 +173,7 @@ function ParticleField() {
     let width = 0;
     let height = 0;
     let frame = 0;
+    let visible = true;
     let particles: { x: number; y: number; vx: number; vy: number; size: number; color: string }[] = [];
     const pointer = { x: 0.5, y: 0.5, active: false };
 
@@ -208,7 +188,7 @@ function ParticleField() {
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      const count = Math.min(440, Math.max(180, Math.floor((width * height) / 7200)));
+      const count = Math.min(width < 640 ? 110 : 440, Math.max(110, Math.floor((width * height) / 7200)));
       particles = Array.from({ length: count }, (_, index) => {
         const angle = index * 2.39996;
         const radius = Math.random() ** 0.65;
@@ -234,6 +214,10 @@ function ParticleField() {
     };
 
     const draw = (time: number) => {
+      if (!visible || document.hidden) {
+        frame = 0;
+        return;
+      }
       context.clearRect(0, 0, width, height);
       const centerX = width * 0.52;
       const centerY = height * 0.48;
@@ -287,8 +271,14 @@ function ParticleField() {
     window.addEventListener("resize", resize);
     canvas.addEventListener("pointermove", movePointer);
     canvas.addEventListener("pointerleave", leave);
+    const io = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible && !frame) frame = window.requestAnimationFrame(draw);
+    });
+    io.observe(canvas);
     frame = window.requestAnimationFrame(draw);
     return () => {
+      io.disconnect();
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
       canvas.removeEventListener("pointermove", movePointer);
@@ -375,13 +365,14 @@ function WhyJoinSection() {
           </Reveal>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
+        <div className="snap-row mt-12 sm:grid sm:grid-cols-2 sm:gap-4 lg:mt-16 lg:grid-cols-4">
           {WHY_JOIN.cards.map((card, i) => (
             <Reveal key={card.key} delay={i * 70}>
               <WhyCard title={card.title} text={card.text} icon={card.icon as "book"} index={i} />
             </Reveal>
           ))}
         </div>
+        <p aria-hidden="true" className="label-mono mt-3 text-faint sm:hidden">Glisse pour voir la suite →</p>
       </div>
     </section>
   );
@@ -464,7 +455,7 @@ function ProjectsSection() {
           </Reveal>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
+        <div className="snap-row mt-12 sm:grid sm:grid-cols-2 sm:gap-4 lg:mt-16 lg:grid-cols-4">
           {PROJECTS_SECTION.items.map((item, i) => (
             <Reveal key={item.slot} delay={i * 70}>
               <ProjectCard
@@ -477,6 +468,7 @@ function ProjectsSection() {
             </Reveal>
           ))}
         </div>
+        <p aria-hidden="true" className="label-mono mt-3 text-faint sm:hidden">Glisse pour voir la suite →</p>
       </div>
     </section>
   );
@@ -611,7 +603,7 @@ function SessionsSection() {
 
 function CtaSection() {
   return (
-    <section className="pb-20 md:pb-28">
+    <section id="cta-final" className="pb-20 md:pb-28">
       <div className="container-x">
         <Reveal>
           <div className="paper-grain relative overflow-hidden rounded-lg border border-ink/12 bg-surface px-6 py-16 text-center md:px-16 md:py-24">
@@ -647,8 +639,11 @@ function CtaSection() {
 ================================================================== */
 
 export default function Landing() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  useTouchGlow(rootRef);
   return (
-    <div className="theme-dark min-h-dvh bg-paper text-ink">
+    <div ref={rootRef} className="theme-dark theme-dark-page min-h-dvh bg-paper text-ink">
+      <ScrollProgress />
       <Navbar />
       <main>
         <Hero />
@@ -661,6 +656,8 @@ export default function Landing() {
         <CtaSection />
       </main>
       <Footer />
+      <div aria-hidden="true" className="h-20 md:hidden" />
+      <StickyJoinBar />
     </div>
   );
 }

@@ -44,8 +44,18 @@ export function Navbar() {
   const { me } = useClub();
   const go = useRouterLink();
 
+  const [hidden, setHidden] = useState(false);
+
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 12);
+      if (Math.abs(y - lastY) > 8) {
+        setHidden(y > lastY && y > 260);
+        lastY = y;
+      }
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -76,6 +86,7 @@ export function Navbar() {
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
+        hidden && !open && "max-lg:-translate-y-full",
         scrolled ? "border-b border-line/80 bg-paper/85 backdrop-blur-xl" : "border-b border-transparent",
       )}
     >

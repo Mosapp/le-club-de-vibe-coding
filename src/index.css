@@ -353,7 +353,7 @@
   --color-moss: #9fb3c4;
 }
 
-body:has(.theme-dark) {
+body:has(.theme-dark-page) {
   background-color: #070b10;
 }
 
@@ -480,4 +480,134 @@ body:has(.theme-dark) {
     opacity: 1;
     transform: none;
   }
+}
+
+
+/* ==================================================================
+   EFFETS "HOOK" & EXPÉRIENCE MOBILE
+================================================================== */
+
+/* Mot rotatif du titre */
+.rot-word {
+  animation: vc-word-in 0.5s var(--ease-out-soft) both;
+  color: var(--color-brand);
+}
+@keyframes vc-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+/* Halo qui suit le doigt / la souris dans le hero + parallaxe */
+.hero-spot {
+  background: radial-gradient(
+    340px circle at var(--hx, 70%) var(--hy, 30%),
+    rgba(240, 102, 47, 0.2),
+    rgba(108, 184, 242, 0.08) 45%,
+    transparent 70%
+  );
+  opacity: var(--hero-spot, 0);
+  transition: opacity 0.4s ease;
+}
+.hero-glow {
+  transform: translate3d(0, calc(var(--sy, 0) * 0.16px), 0);
+  will-change: transform;
+}
+
+/* Spotlight sur les cartes (thème sombre) */
+.theme-dark .rounded-card {
+  position: relative;
+  isolation: isolate;
+}
+.theme-dark .rounded-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(240, 102, 47, 0.2),
+    rgba(108, 184, 242, 0.1) 50%,
+    transparent 75%
+  );
+}
+.theme-dark .rounded-card:hover::before,
+.theme-dark .rounded-card.spot-on::before {
+  opacity: 1;
+}
+
+/* Défilement horizontal "swipe" sur mobile (grille à partir de 640 px) */
+@media (max-width: 639px) {
+  .snap-row {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    margin-inline: -20px;
+    padding-inline: 20px;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 20px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .snap-row::-webkit-scrollbar {
+    display: none;
+  }
+  .snap-row > * {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+}
+
+/* Retour tactile : les boutons "s'enfoncent" légèrement */
+button:active {
+  scale: 0.97;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rot-word {
+    animation: none;
+  }
+  .hero-glow {
+    transform: none;
+  }
+}
+
+
+/* ==================================================================
+   REFONTE UI — thème clair (espace membre / admin) & pages d'entrée
+================================================================== */
+
+.app-bg {
+  background-color: var(--color-paper);
+  background-image:
+    radial-gradient(900px 420px at 8% -8%, rgba(233, 93, 44, 0.09), transparent 70%),
+    radial-gradient(800px 420px at 100% 0%, rgba(60, 130, 210, 0.08), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+.pill-nav {
+  box-shadow: 0 18px 50px -18px rgba(16, 32, 44, 0.5), 0 2px 6px rgba(16, 32, 44, 0.06);
+}
+
+.ring-track {
+  stroke: rgba(176, 206, 226, 0.16);
+}
+
+.field-dark-error {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
 }

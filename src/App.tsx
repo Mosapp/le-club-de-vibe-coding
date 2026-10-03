@@ -167,8 +167,29 @@ function Routes() {
   return <NotFound />;
 }
 
+/* Écran affiché pendant la validation du lien reçu par mail (évite de voir la page d'accueil clignoter). */
+function ConfirmScreen() {
+  return (
+    <div className="theme-dark relative flex min-h-dvh items-center justify-center overflow-hidden bg-paper px-6 text-ink">
+      <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0" />
+      <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0" />
+      <div className="relative text-center" role="status" aria-live="polite">
+        <span className="neon-window mx-auto flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_0_60px_-10px_rgba(240,102,47,0.6)]">
+          <span className="spin h-6 w-6 rounded-full border-2 border-line border-t-brand" />
+        </span>
+        <h1 className="mt-8 text-[clamp(1.5rem,5vw,2.1rem)] font-bold tracking-[-0.03em]">
+          Validation de ton email<span className="text-gradient">…</span>
+        </h1>
+        <p className="mx-auto mt-3 max-w-xs text-[15px] leading-relaxed text-muted">
+          Une seconde, on prépare ton espace et on t'y emmène.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Shell() {
-  const { toasts, dismissToast } = useClub();
+  const { toasts, dismissToast, confirmingEmail } = useClub();
   const path = useRoute();
 
   useEffect(() => {
@@ -177,11 +198,15 @@ function Shell() {
 
   return (
     <>
-      <PageFade key={path}>
-        <Suspense fallback={<PageLoader />}>
-          <Routes />
-        </Suspense>
-      </PageFade>
+      {confirmingEmail ? (
+        <ConfirmScreen />
+      ) : (
+        <PageFade key={path}>
+          <Suspense fallback={<PageLoader />}>
+            <Routes />
+          </Suspense>
+        </PageFade>
+      )}
       <Toaster toasts={toasts} onDismiss={dismissToast} />
     </>
   );

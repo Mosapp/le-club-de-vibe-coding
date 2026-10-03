@@ -11,7 +11,8 @@ import {
 import { CHALLENGES_SECTION, RULES_INITIAL } from "@/config/content";
 import { clearMediaOverrides, writeMediaOverride } from "@/config/media";
 import { isConfiguredAdmin } from "@/config/admin-access";
-import { authRedirectUrl, supabase } from "@/lib/supabase";
+import { authCallback, authRedirectUrl, supabase } from "@/lib/supabase";
+import { navigate } from "@/lib/router";
 
 /* ------------------------------------------------------------------
    COUCHE DONNÉES — CLUB DE VIBE CODING
@@ -206,6 +207,39 @@ function readSessionId(): string | null {
 
 export class ApiError extends Error {}
 
+/* ------------------- VALIDATION DE L'EMAIL (lien du mail) ------------------- */
+
+let callbackHandled = false;
+
+/** Après le clic sur le lien du mail : on s'assure que la fiche membre est complète
+    (les réponses du formulaire d'inscription voyagent dans les métadonnées du compte). */
+async function completeEmailConfirmation(user: { id: string; user_metadata?: Record<string, unknown> }) {
+  if (!supabase) return;
+  try {
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const local = load().members.find((m) => m.id === user.id);
+    const { data: row } = await supabase.from("members").select("*").eq("id", user.id).maybeSingle();
+    if (row && row.level) return; // fiche déjà complète : rien à faire
+    const text = (v: unknown, fallback = "") => (typeof v === "string" && v ? v : fallback);
+    const firstName = text(meta.first_name, local?.firstName ?? row?.first_name ?? "Membre");
+    const lastName = text(meta.last_name, local?.lastName ?? row?.last_name ?? "du club");
+    const motivations = Array.isArray(meta.motivations) ? (meta.motivations as string[]) : local?.motivations ?? [];
+    const candidate = { id: user.id, firstName, lastName, role: "MEMBER", status: "ACTIVE" };
+    await supabase.from("members").upsert({
+      id: user.id,
+      first_name: firstName,
+      last_name: lastName,
+      level: text(meta.level, local?.level ?? ""),
+      motivations,
+      goal: text(meta.goal, local?.goal ?? ""),
+      engagement: text(meta.engagement, local?.engagement ?? ""),
+      role: isConfiguredAdmin(candidate) ? "ADMIN" : row?.role ?? "MEMBER",
+    });
+  } catch {
+    /* la connexion reste valide même si l'enrichissement du profil échoue */
+  }
+}
+
 /* --------------------------- PROVIDER ---------------------------- */
 
 interface Ctx {
@@ -217,6 +251,8 @@ interface Ctx {
   toast: (t: Omit<Toast, "id">) => void;
   dismissToast: (id: string) => void;
   pending: Record<string, boolean>;
+  /** true pendant la validation du lien reçu par mail (écran de transition) */
+  confirmingEmail: boolean;
   /* auth */
   signUp: (input: Omit<Member, "id" | "role" | "status" | "createdAt" | "lastSeenAt"> & { email: string; password: string }) => Promise<Member>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -265,6 +301,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [mediaVersion, setMediaVersion] = useState(0);
   const [pending, setPending] = useState<Record<string, boolean>>({});
+  const [confirming, setConfirming] = useState<"idle" | "working" | "done">(() =>
+    supabase && authCallback.tokens && authCallback.type !== "recovery" ? "working" : "idle",
+  );
   const timers = useRef<Record<string, number>>({});
 
   useEffect(() => save(data), [data]);
@@ -297,6 +336,11 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     const loadSharedData = async () => {
       const { data: auth } = await supabase.auth.getSession();
       if (!auth.session || cancelled) return;
+      if (confirming === "working" && !callbackHandled) {
+        callbackHandled = true;
+        await completeEmailConfirmation(auth.session.user);
+        if (cancelled) return;
+      }
       setSessionId(auth.session.user.id);
       const [{ data: remoteMembers }, { data: remoteProjects }] = await Promise.all([
         supabase.from("members").select("*"),
@@ -357,6 +401,36 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     }, 4200);
   }, []);
 
+  /* Lien de validation cliqué → on emmène directement la personne dans son espace. */
+  useEffect(() => {
+    if (confirming !== "working" || !me) return;
+    setConfirming("done");
+    toast({ title: `Email confirmé. Bienvenue ${me.firstName} !`, description: "Ton espace est prêt.", tone: "success" });
+    navigate("/app", { replace: true });
+  }, [confirming, me, toast]);
+
+  /* Sécurité : si la validation n'aboutit pas, on ne laisse pas la personne bloquée. */
+  useEffect(() => {
+    if (confirming !== "working") return;
+    const id = window.setTimeout(() => {
+      setConfirming("idle");
+      toast({ title: "Presque !", description: "Connecte-toi avec ton email et ton mot de passe.", tone: "info" });
+      navigate("/login", { replace: true });
+    }, 12000);
+    return () => window.clearTimeout(id);
+  }, [confirming, toast]);
+
+  /* Lien expiré ou déjà utilisé. */
+  useEffect(() => {
+    if (!authCallback.error || authCallback.tokens) return;
+    navigate("/login", { replace: true });
+    toast({
+      title: "Lien expiré ou déjà utilisé",
+      description: "Si ton email est déjà confirmé, connecte-toi directement.",
+      tone: "info",
+    });
+  }, [toast]);
+
   const dismissToast = useCallback((id: string) => {
     window.clearTimeout(timers.current[id]);
     setToasts((prev) => prev.filter((x) => x.id !== id));
@@ -393,7 +467,14 @@ export function ClubProvider({ children }: { children: ReactNode }) {
             password: input.password,
             options: {
               emailRedirectTo: authRedirectUrl,
-              data: { first_name: input.firstName, last_name: input.lastName },
+              data: {
+                first_name: input.firstName,
+                last_name: input.lastName,
+                level: input.level,
+                motivations: input.motivations,
+                goal: input.goal,
+                engagement: input.engagement,
+              },
             },
           });
           if (error) throw new ApiError(error.message);
@@ -920,6 +1001,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     toast,
     dismissToast,
     pending,
+    confirmingEmail: confirming === "working",
     signUp,
     signIn,
     signOut,

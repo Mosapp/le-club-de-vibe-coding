@@ -5,7 +5,6 @@ import { Badge, Button, Card, EmptyState, Icon, ProgressBar, Stat } from "@/comp
 import { EMPTY_STATES } from "@/config/content";
 import { navigate } from "@/lib/router";
 import { memberProgress, useClub } from "@/lib/store";
-import { PageHeader } from "@/pages/member/Shell";
 import { Reveal } from "@/lib/motion";
 
 export default function MemberHome() {
@@ -35,20 +34,62 @@ export default function MemberHome() {
   return (
     <div className="space-y-10">
       <Reveal>
-        <PageHeader
-          title={`Bonjour, ${me.firstName}.`}
-          subtitle="Qu'est-ce qu'on construit aujourd'hui ?"
-          action={
-            <>
-              <Button variant="secondary" icon="idea" onClick={() => navigate("/app/idees")}>
-                Boîte à idées
-              </Button>
-              <Button iconRight="arrowRight" onClick={() => navigate("/app/projets")}>
-                Partager un projet
-              </Button>
-            </>
-          }
-        />
+        <section className="theme-dark relative overflow-hidden rounded-[28px] border border-line bg-paper p-6 text-ink shadow-[0_34px_80px_-44px_rgba(16,32,44,0.75)] md:p-10">
+          <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-0 opacity-70" />
+          <div aria-hidden="true" className="hero-glow pointer-events-none absolute inset-0" />
+          <div className="relative flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-xl">
+              <span className="label-mono inline-flex items-center gap-2 text-brand-ink">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                Ton espace
+              </span>
+              <h1 className="mt-4 text-[clamp(2rem,5.6vw,3.1rem)] font-bold leading-[1.02] tracking-[-0.03em]">
+                Bonjour, <span className="text-gradient">{me.firstName}.</span>
+              </h1>
+              <p className="mt-3 text-[15.5px] leading-relaxed text-muted">Qu'est-ce qu'on construit aujourd'hui ?</p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button iconRight="arrowRight" onClick={() => navigate("/app/projets")}>
+                  Partager un projet
+                </Button>
+                <Button variant="secondary" icon="idea" onClick={() => navigate("/app/idees")}>
+                  Boîte à idées
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-5 md:flex-col md:items-end md:gap-3">
+              <div className="relative h-[108px] w-[108px] shrink-0">
+                <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#ff8f61" />
+                      <stop offset="100%" stopColor="#6cb8f2" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="40" cy="40" r="34" fill="none" strokeWidth="6" className="ring-track" />
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    fill="none"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    stroke="url(#ring-grad)"
+                    strokeDasharray={2 * Math.PI * 34}
+                    strokeDashoffset={2 * Math.PI * 34 * (1 - Math.min(100, progress.pct) / 100)}
+                    style={{ transition: "stroke-dashoffset 0.9s ease-out" }}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[24px] font-bold tracking-tight">
+                  {progress.pct}%
+                </span>
+              </div>
+              <div className="md:text-right">
+                <p className="label-mono text-faint">Progression</p>
+                <p className="mt-1 text-[14px] text-muted">{progress.points} pts</p>
+              </div>
+            </div>
+          </div>
+        </section>
       </Reveal>
 
       {/* ---------- objectif + progression ---------- */}

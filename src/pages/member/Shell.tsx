@@ -27,10 +27,12 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="border-b border-line pb-8">
+    <header className="relative pb-8">
+      <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-line via-line to-transparent" />
+      <span aria-hidden="true" className="absolute bottom-0 left-0 h-[2px] w-16 rounded-full bg-brand" />
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-[clamp(1.6rem,4.4vw,2.4rem)] font-semibold leading-[1.05] text-ink">{title}</h1>
+          <h1 className="text-[clamp(1.7rem,4.6vw,2.5rem)] font-bold leading-[1.04] tracking-[-0.03em] text-ink">{title}</h1>
           {subtitle && <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">{subtitle}</p>}
         </div>
         {action && <div className="flex shrink-0 flex-wrap items-center gap-3">{action}</div>}
@@ -61,7 +63,7 @@ export function MemberShell({
   const isActive = (r: string) => (r === "/app" ? route === "/app" : route.startsWith(r));
 
   return (
-    <div className="min-h-dvh bg-paper lg:flex">
+    <div className="app-bg min-h-dvh lg:flex">
       {/* ---------------- sidebar desktop ---------------- */}
       <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-line bg-surface px-5 py-6 lg:flex">
         <Logo />
@@ -78,7 +80,7 @@ export function MemberShell({
               className={cn(
                 "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14.5px] transition-all duration-200",
                 isActive(item.route)
-                  ? "bg-ink text-white"
+                  ? "bg-ink text-white shadow-[0_10px_24px_-12px_rgba(16,32,44,0.7)]"
                   : "text-muted hover:bg-ink/5 hover:text-ink",
               )}
             >
@@ -140,15 +142,27 @@ export function MemberShell({
         {/* header mobile */}
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-line bg-paper/90 px-5 backdrop-blur-md lg:hidden">
           <Logo />
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Menu"
-            aria-expanded={menuOpen}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-ink"
-          >
-            <Icon name={menuOpen ? "close" : "menu"} />
-          </button>
+          <div className="flex items-center gap-2.5">
+            {me && (
+              <button
+                type="button"
+                onClick={() => navigate("/app/profil")}
+                aria-label="Mon profil"
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-brand to-[#f59a6c] text-[13px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(233,93,44,0.7)]"
+              >
+                {me.avatarUrl ? <img src={me.avatarUrl} alt="" className="h-full w-full object-cover" /> : initials(me)}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-ink"
+            >
+              <Icon name={menuOpen ? "close" : "menu"} />
+            </button>
+          </div>
         </header>
 
         {menuOpen && (
@@ -191,13 +205,13 @@ export function MemberShell({
           </div>
         )}
 
-        <main className="flex-1 px-5 pb-28 pt-8 md:px-8 lg:px-12 lg:pb-16 lg:pt-12">
+        <main className="flex-1 px-5 pb-32 pt-8 md:px-8 lg:px-12 lg:pb-16 lg:pt-12">
           <div className="mx-auto w-full max-w-5xl">{children}</div>
         </main>
       </div>
 
       {/* ---------------- nav mobile bas ---------------- */}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
+      <nav className="pill-nav fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] z-40 grid grid-cols-6 gap-0.5 rounded-2xl border border-line bg-surface/95 p-1.5 backdrop-blur-md lg:hidden">
         {NAV_ITEMS.filter((i) => i.mobile).map((item) => (
           <a
             key={item.route}
@@ -207,12 +221,12 @@ export function MemberShell({
               go(item.route);
             }}
             className={cn(
-              "flex flex-col items-center gap-1.5 py-3 transition-colors",
-              isActive(item.route) ? "text-brand-ink" : "text-faint",
+              "flex flex-col items-center gap-1 rounded-xl py-2 transition-all duration-200",
+              isActive(item.route) ? "bg-brand-soft text-brand-ink" : "text-faint active:bg-ink/5",
             )}
           >
             <Icon name={item.icon} className="h-[19px] w-[19px]" />
-            <span className="text-[10.5px] font-medium">{item.label}</span>
+            <span className="text-[10px] font-medium">{item.label}</span>
           </a>
         ))}
       </nav>
