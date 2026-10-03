@@ -34,3 +34,9 @@ Fichiers inutilisés que tu peux supprimer : `src/media/branding/logo.png`, `src
 - Boutons, champs (halo orange au focus), cartes, badges et notifications (en haut sur mobile) améliorés ; fond de l'admin et du membre légèrement animé par des lueurs douces.
 
 À vérifier dans Supabase (Authentication → URL Configuration) : l'adresse de ton site GitHub Pages doit figurer dans « Redirect URLs » (c'est déjà le cas si les mails de confirmation fonctionnent aujourd'hui).
+
+## Correctif : voir les projets publiés par les autres membres
+
+Cause : les projets et membres partagés n'étaient chargés qu'une fois, au démarrage de la page. Une personne qui se connectait ensuite (sans recharger) ne voyait que ses propres données, et une erreur de chargement vidait la liste en silence.
+
+- `src/lib/store.tsx` : rechargement à chaque connexion, temps réel branché seulement une fois connecté, rafraîchissement au retour sur l'onglet et toutes les 60 s, et en cas d'erreur on garde les données déjà affichées + message d'alerte explicite.

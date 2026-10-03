@@ -305,6 +305,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     supabase && authCallback.tokens && authCallback.type !== "recovery" ? "working" : "idle",
   );
   const timers = useRef<Record<string, number>>({});
+  const toastRef = useRef<(t: Omit<Toast, "id">) => void>(() => {});
 
   useEffect(() => save(data), [data]);
 
@@ -332,59 +333,136 @@ export function ClubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return;
+    const sb = supabase;
     let cancelled = false;
+    let inflight = false;
+    let again = false;
+    let warned = false;
+    let channel: ReturnType<typeof sb.channel> | null = null;
+
     const loadSharedData = async () => {
-      const { data: auth } = await supabase.auth.getSession();
-      if (!auth.session || cancelled) return;
-      if (confirming === "working" && !callbackHandled) {
-        callbackHandled = true;
-        await completeEmailConfirmation(auth.session.user);
-        if (cancelled) return;
+      if (inflight) {
+        again = true;
+        return;
       }
-      setSessionId(auth.session.user.id);
-      const [{ data: remoteMembers }, { data: remoteProjects }] = await Promise.all([
-        supabase.from("members").select("*"),
-        supabase.from("projects").select("*").order("created_at", { ascending: false }),
-      ]);
-      if (cancelled) return;
-      const members: Member[] = (remoteMembers ?? []).map((profile) => ({
-        id: profile.id,
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        avatarUrl: profile.avatar_url ?? undefined,
-        level: profile.level,
-        motivations: profile.motivations ?? [],
-        goal: profile.goal,
-        engagement: profile.engagement,
-        role: profile.role,
-        status: profile.status,
-        createdAt: profile.created_at,
-        lastSeenAt: profile.last_seen_at,
-      }));
-      const projects: Project[] = (remoteProjects ?? []).map((project) => ({
-        id: project.id,
-        title: project.title,
-        description: project.description,
-        kind: project.kind,
-        tech: project.tech ?? [],
-        mediaSlot: project.media_slot,
-        imageUrl: project.image_url,
-        link: project.link,
-        authorId: project.author_id,
-        createdAt: project.created_at,
-        published: project.published,
-      }));
-      setData((prev) => ({ ...prev, members, projects }));
+      inflight = true;
+      try {
+        const { data: auth } = await sb.auth.getSession();
+        if (!auth.session || cancelled) return;
+        if (confirming === "working" && !callbackHandled) {
+          callbackHandled = true;
+          await completeEmailConfirmation(auth.session.user);
+          if (cancelled) return;
+        }
+        setSessionId(auth.session.user.id);
+        const [membersRes, projectsRes] = await Promise.all([
+          sb.from("members").select("*"),
+          sb.from("projects").select("*").order("created_at", { ascending: false }),
+        ]);
+        if (cancelled) return;
+        // En cas d'erreur on GARDE ce qu'on a déjà (au lieu de tout vider en silence).
+        const failure = membersRes.error ?? projectsRes.error;
+        if (failure) {
+          console.warn("[club] chargement des données partagées :", failure.message);
+          if (!warned) {
+            warned = true;
+            toastRef.current({
+              title: "Impossible de charger les projets du club",
+              description: failure.message,
+              tone: "error",
+            });
+          }
+        }
+        const members: Member[] | null = membersRes.error
+          ? null
+          : (membersRes.data ?? []).map((profile) => ({
+              id: profile.id,
+              firstName: profile.first_name,
+              lastName: profile.last_name,
+              avatarUrl: profile.avatar_url ?? undefined,
+              level: profile.level,
+              motivations: profile.motivations ?? [],
+              goal: profile.goal,
+              engagement: profile.engagement,
+              role: profile.role,
+              status: profile.status,
+              createdAt: profile.created_at,
+              lastSeenAt: profile.last_seen_at,
+            }));
+        const projects: Project[] | null = projectsRes.error
+          ? null
+          : (projectsRes.data ?? []).map((project) => ({
+              id: project.id,
+              title: project.title,
+              description: project.description,
+              kind: project.kind,
+              tech: project.tech ?? [],
+              mediaSlot: project.media_slot,
+              imageUrl: project.image_url,
+              link: project.link,
+              authorId: project.author_id,
+              createdAt: project.created_at,
+              published: project.published,
+            }));
+        setData((prev) => ({
+          ...prev,
+          ...(members ? { members } : {}),
+          ...(projects ? { projects } : {}),
+        }));
+      } finally {
+        inflight = false;
+        if (again && !cancelled) {
+          again = false;
+          void loadSharedData();
+        }
+      }
     };
-    void loadSharedData();
-    const channel = supabase
-      .channel("club-shared-data")
-      .on("postgres_changes", { event: "*", schema: "public", table: "members" }, () => void loadSharedData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, () => void loadSharedData())
-      .subscribe();
+
+    /* Le temps réel n'est branché qu'une fois la personne connectée (les tables sont protégées). */
+    const startRealtime = () => {
+      if (channel || cancelled) return;
+      channel = sb
+        .channel("club-shared-data")
+        .on("postgres_changes", { event: "*", schema: "public", table: "members" }, () => void loadSharedData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, () => void loadSharedData())
+        .subscribe();
+    };
+    const stopRealtime = () => {
+      if (channel) void sb.removeChannel(channel);
+      channel = null;
+    };
+
+    void loadSharedData().then(startRealtime);
+
+    /* Connexion / reconnexion : on recharge les projets des autres membres tout de suite. */
+    const { data: authListener } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        stopRealtime();
+        return;
+      }
+      if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED")) {
+        window.setTimeout(() => {
+          void loadSharedData();
+          startRealtime();
+        }, 0);
+      }
+    });
+
+    /* Filet de sécurité si le temps réel n'est pas activé côté Supabase : on rafraîchit au retour sur l'onglet et toutes les 60 s. */
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") void loadSharedData();
+    };
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    window.addEventListener("focus", refreshIfVisible);
+    const poll = window.setInterval(refreshIfVisible, 60000);
+
     return () => {
       cancelled = true;
-      void supabase.removeChannel(channel);
+      authListener.subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+      window.removeEventListener("focus", refreshIfVisible);
+      window.clearInterval(poll);
+      stopRealtime();
     };
   }, []);
 
@@ -429,6 +507,10 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       description: "Si ton email est déjà confirmé, connecte-toi directement.",
       tone: "info",
     });
+  }, [toast]);
+
+  useEffect(() => {
+    toastRef.current = toast;
   }, [toast]);
 
   const dismissToast = useCallback((id: string) => {
