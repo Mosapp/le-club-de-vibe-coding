@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { JOIN } from "@/config/content";
 import { MediaSlot } from "@/components/media";
 import { Logo } from "@/components/layout";
+import { CheckEmail } from "@/components/check-email";
 import { Badge, Button, Chip, Field, Icon, Input, PasswordInput, ProgressBar, Textarea } from "@/components/ui";
 import { navigate } from "@/lib/router";
 import { ApiError, useClub } from "@/lib/store";
@@ -26,6 +27,7 @@ export default function Join() {
   const [form, setForm] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+  const [checkEmail, setCheckEmail] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [dir, setDir] = useState<"forward" | "back">("forward");
   // si un membre est déjà connecté en arrivant ici, on l'envoie directement
@@ -35,6 +37,11 @@ export default function Join() {
   useEffect(() => {
     if (alreadyMember.current && me) navigate("/app", { replace: true });
   }, [me]);
+
+  // email confirmé depuis un autre onglet / l'appli mail : la session apparaît, on entre directement
+  useEffect(() => {
+    if (checkEmail && me) navigate("/app", { replace: true });
+  }, [checkEmail, me]);
 
   const steps = JOIN.steps;
   const current = steps[step];
@@ -67,7 +74,7 @@ export default function Join() {
       return;
     }
     try {
-      await signUp({
+      const result = await signUp({
         email: form.email.trim(),
         password: form.password,
         firstName: form.firstName.trim(),
@@ -77,8 +84,13 @@ export default function Join() {
         goal: form.goal.trim(),
         engagement: form.engagement,
       });
-      setDone(true);
+      if (result.needsConfirmation) setCheckEmail(true);
+      else setDone(true);
     } catch (err) {
+      if (err instanceof ApiError && err.code === "already_registered") {
+        setStep(0);
+        setErrors({ email: "Cet email a déjà un compte." });
+      }
       setServerError(err instanceof ApiError ? err.message : "Une erreur est survenue. Réessaie dans un instant.");
     }
   };
@@ -102,6 +114,21 @@ export default function Join() {
     set("motivations", form.motivations.includes(m) ? form.motivations.filter((x) => x !== m) : [...form.motivations, m]);
 
   const completion = useMemo(() => Math.round(((step + (done ? 1 : 0)) / steps.length) * 100), [step, done, steps.length]);
+
+  /* ------------------- ÉCRAN « VÉRIFIE TA BOÎTE MAIL » ------------------- */
+  if (checkEmail) {
+    return (
+      <CheckEmail
+        email={form.email.trim()}
+        onChangeEmail={() => {
+          setCheckEmail(false);
+          setServerError(null);
+          setStep(0);
+        }}
+        onLogin={() => navigate("/login")}
+      />
+    );
+  }
 
   /* -------------------------- ÉCRAN DE SUCCÈS -------------------------- */
   if (done) {
@@ -256,6 +283,16 @@ export default function Join() {
                       invalid={!!errors.lastName}
                     />
                   </Field>
+                  <p className="text-[14px] text-muted">
+                    Déjà membre ?{" "}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/login")}
+                      className="font-medium text-brand-ink underline underline-offset-2"
+                    >
+                      Se connecter
+                    </button>
+                  </p>
                 </>
               )}
 

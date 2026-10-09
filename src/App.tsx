@@ -7,6 +7,7 @@ import { PageFade } from "@/lib/motion";
 import Landing from "@/pages/Landing";
 import Join from "@/pages/Join";
 import Login from "@/pages/Login";
+import ResetPassword from "@/pages/ResetPassword";
 
 /* Chargement à la demande : l'espace membre et l'admin ne sont
    téléchargés que lorsque la personne y accède. */
@@ -79,6 +80,7 @@ function Routes() {
   if (path === "/" || path === "") return <Landing />;
   if (path === "/join") return <Join />;
   if (path === "/login") return <Login />;
+  if (path === "/reset") return <ResetPassword />;
   if (path === "/galerie") return <GalleryPage />;
 
   if (path.startsWith("/app")) {

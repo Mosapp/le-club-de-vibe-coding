@@ -204,7 +204,44 @@ function readSessionId(): string | null {
 
 /* ------------------------- ERREURS MÉTIER ------------------------ */
 
-export class ApiError extends Error {}
+export type ApiErrorCode = "email_not_confirmed" | "already_registered" | "rate_limited" | "session_missing";
+
+export class ApiError extends Error {
+  code?: ApiErrorCode;
+  constructor(message: string, code?: ApiErrorCode) {
+    super(message);
+    this.code = code;
+  }
+}
+
+/** Traduit les erreurs Supabase (en anglais) en messages clairs pour un membre. */
+function authError(error: { message?: string; code?: string; status?: number } | null | undefined, fallback?: string): ApiError {
+  const msg = (error?.message ?? "").toLowerCase();
+  const code = (error?.code ?? "").toLowerCase();
+  const has = (...needles: string[]) => needles.some((n) => code === n || msg.includes(n));
+
+  if (has("email_not_confirmed", "email not confirmed"))
+    return new ApiError("Ton email n'est pas encore confirmé. Ouvre le mail que nous t'avons envoyé (pense aux spams).", "email_not_confirmed");
+  if (has("invalid_credentials", "invalid login credentials"))
+    return new ApiError("Email ou mot de passe incorrect.");
+  if (has("user_already_exists", "user already registered", "already been registered"))
+    return new ApiError("Cet email a déjà un compte. Connecte-toi, ou demande un nouveau mot de passe.", "already_registered");
+  if (has("weak_password", "password should be at least"))
+    return new ApiError("Le mot de passe est trop faible : 6 caractères minimum.");
+  if (has("same_password", "should be different from the old password"))
+    return new ApiError("Choisis un mot de passe différent de l'ancien.");
+  if (has("email_address_invalid", "unable to validate email", "invalid format"))
+    return new ApiError("Cette adresse email n'a pas l'air valide. Vérifie la saisie.");
+  if (has("over_email_send_rate_limit", "over_request_rate_limit", "rate limit", "for security purposes", "too many requests") || error?.status === 429)
+    return new ApiError("Trop de tentatives. Patiente une minute avant de réessayer.", "rate_limited");
+  if (has("session_not_found", "auth session missing", "jwt expired", "invalid jwt"))
+    return new ApiError("Ce lien a expiré. Redemande un nouveau lien.", "session_missing");
+  if (has("signup_disabled", "signups not allowed"))
+    return new ApiError("Les inscriptions sont fermées pour le moment.");
+  if (has("failed to fetch", "networkerror", "network request failed", "load failed"))
+    return new ApiError("Impossible de joindre le serveur. Vérifie ta connexion internet.");
+  return new ApiError(fallback ?? "Une erreur est survenue. Réessaie dans un instant.");
+}
 
 /* ------------------- VALIDATION DE L'EMAIL (lien du mail) ------------------- */
 
@@ -253,8 +290,14 @@ interface Ctx {
   /** true pendant la validation du lien reçu par mail (écran de transition) */
   confirmingEmail: boolean;
   /* auth */
-  signUp: (input: Omit<Member, "id" | "role" | "status" | "createdAt" | "lastSeenAt"> & { email: string; password: string }) => Promise<Member>;
+  signUp: (input: Omit<Member, "id" | "role" | "status" | "createdAt" | "lastSeenAt"> & { email: string; password: string }) => Promise<{ member: Member; needsConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<void>;
+  /** renvoie le mail de confirmation d'inscription */
+  resendConfirmation: (email: string) => Promise<void>;
+  /** envoie le mail « mot de passe oublié » */
+  requestPasswordReset: (email: string) => Promise<void>;
+  /** définit le nouveau mot de passe (après le clic sur le lien reçu) */
+  updatePassword: (password: string) => Promise<void>;
   signOut: () => void;
   /* profil */
   updateProfile: (patch: Partial<Pick<Member, "firstName" | "lastName" | "avatarUrl" | "level" | "goal" | "engagement" | "motivations">>) => void;
@@ -458,6 +501,10 @@ export function ClubProvider({ children }: { children: ReactNode }) {
 
     /* Connexion / reconnexion : on recharge les projets des autres membres tout de suite. */
     const { data: authListener } = sb.auth.onAuthStateChange((event, session) => {
+      /* Clic sur « mot de passe oublié » dans le mail : on ouvre l'écran pour choisir un nouveau mot de passe. */
+      if (event === "PASSWORD_RECOVERY" || (authCallback.type === "recovery" && authCallback.tokens && event === "SIGNED_IN")) {
+        window.setTimeout(() => navigate("/reset", { replace: true }), 0);
+      }
       if (event === "SIGNED_OUT") {
         stopRealtime();
         return;
@@ -581,8 +628,13 @@ export function ClubProvider({ children }: { children: ReactNode }) {
               },
             },
           });
-          if (error) throw new ApiError(error.message);
+          if (error) throw authError(error, "Impossible de créer ton compte.");
           if (!authData.user) throw new ApiError("Impossible de créer ton compte.");
+          // Avec la confirmation par email activée, Supabase ne renvoie pas d'erreur pour un email déjà
+          // inscrit : il renvoie un utilisateur « vide » (aucune identité). On le détecte ici.
+          if (Array.isArray(authData.user.identities) && authData.user.identities.length === 0) {
+            throw new ApiError("Cet email a déjà un compte. Connecte-toi, ou demande un nouveau mot de passe.", "already_registered");
+          }
           const now = new Date().toISOString();
           const member: Member = {
             ...input,
@@ -606,14 +658,13 @@ export function ClubProvider({ children }: { children: ReactNode }) {
             if (profileError) throw new ApiError(profileError.message);
           }
           member.role = isConfiguredAdmin(member) ? "ADMIN" : "MEMBER";
-          setData((prev) => ({ ...prev, members: [...prev.members, member] }));
-          if (authData.session) setSessionId(member.id);
-          toast({
-            title: authData.session ? `Bienvenue ${member.firstName}.` : "Compte créé.",
-            description: authData.session ? "Ton compte est prêt." : "Vérifie ton email pour confirmer ton inscription, puis connecte-toi.",
-            tone: "success",
-          });
-          return member;
+          setData((prev) => ({ ...prev, members: [...prev.members.filter((m) => m.id !== member.id), member] }));
+          if (authData.session) {
+            setSessionId(member.id);
+            toast({ title: `Bienvenue ${member.firstName}.`, description: "Ton compte est prêt.", tone: "success" });
+          }
+          // Pas de session = il faut d'abord confirmer l'email : l'écran « vérifie ta boîte mail » prend le relais.
+          return { member, needsConfirmation: !authData.session };
         }
         const now = new Date().toISOString();
         const member: Member = {
@@ -632,7 +683,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         }));
         setSessionId(member.id);
         toast({ title: `Bienvenue ${member.firstName} 👋`, description: "Ton profil est prêt.", tone: "success" });
-        return member;
+        return { member, needsConfirmation: false };
       } finally {
         setBusy("signUp", false);
       }
@@ -643,50 +694,80 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const signIn: Ctx["signIn"] = useCallback(
     async (email, password) => {
       setBusy("signIn", true);
-      await new Promise((r) => setTimeout(r, 320));
-      if (supabase) {
-        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error || !authData.user) throw new ApiError(error?.message ?? "Connexion impossible.");
-        let { data: profile, error: profileError } = await supabase.from("members").select("*").eq("id", authData.user.id).single();
-        if (!profile) {
-          const metadata = authData.user.user_metadata ?? {};
-          const recovery = await supabase.from("members").upsert({
-            id: authData.user.id,
-            first_name: String(metadata.first_name ?? "Membre"),
-            last_name: String(metadata.last_name ?? "du club"),
-          }).select("*").single();
-          profile = recovery.data;
-          profileError = recovery.error;
+      try {
+        await new Promise((r) => setTimeout(r, 320));
+        if (supabase) {
+          const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error || !authData.user) throw authError(error, "Connexion impossible. Réessaie.");
+          let { data: profile, error: profileError } = await supabase.from("members").select("*").eq("id", authData.user.id).single();
+          if (!profile) {
+            const metadata = authData.user.user_metadata ?? {};
+            const recovery = await supabase.from("members").upsert({
+              id: authData.user.id,
+              first_name: String(metadata.first_name ?? "Membre"),
+              last_name: String(metadata.last_name ?? "du club"),
+            }).select("*").single();
+            profile = recovery.data;
+            profileError = recovery.error;
+          }
+          if (profileError || !profile) throw new ApiError(profileError?.message ?? "Profil membre introuvable.");
+          const member: Member = {
+            id: profile.id,
+            firstName: profile.first_name,
+            lastName: profile.last_name,
+            avatarUrl: profile.avatar_url ?? undefined,
+            level: profile.level,
+            motivations: profile.motivations ?? [],
+            goal: profile.goal,
+            engagement: profile.engagement,
+            role: profile.role,
+            status: profile.status,
+            createdAt: profile.created_at,
+            lastSeenAt: profile.last_seen_at,
+          };
+          setData((prev) => ({ ...prev, members: [...prev.members.filter((m) => m.id !== member.id), member] }));
+          setSessionId(member.id);
+          toast({ title: `Content de te revoir, ${member.firstName}.`, tone: "success" });
+          return;
         }
-        if (profileError || !profile) throw new ApiError(profileError?.message ?? "Profil membre introuvable.");
-        const member: Member = {
-          id: profile.id,
-          firstName: profile.first_name,
-          lastName: profile.last_name,
-          avatarUrl: profile.avatar_url ?? undefined,
-          level: profile.level,
-          motivations: profile.motivations ?? [],
-          goal: profile.goal,
-          engagement: profile.engagement,
-          role: profile.role,
-          status: profile.status,
-          createdAt: profile.created_at,
-          lastSeenAt: profile.last_seen_at,
-        };
-        setData((prev) => ({ ...prev, members: [...prev.members.filter((m) => m.id !== member.id), member] }));
+        const member = data.members.find((m) => m.id === email);
+        if (!member) throw new ApiError("Ce profil n'existe plus.");
+        if (member.status === "SUSPENDED") throw new ApiError("Ce profil est suspendu. Contacte le bureau du club.");
         setSessionId(member.id);
-        setBusy("signIn", false);
         toast({ title: `Content de te revoir, ${member.firstName}.`, tone: "success" });
-        return;
+      } finally {
+        setBusy("signIn", false);
       }
-      const member = data.members.find((m) => m.id === email);
-      setBusy("signIn", false);
-      if (!member) throw new ApiError("Ce profil n'existe plus.");
-      if (member.status === "SUSPENDED") throw new ApiError("Ce profil est suspendu. Contacte le bureau du club.");
-      setSessionId(member.id);
-      toast({ title: `Content de te revoir, ${member.firstName}.`, tone: "success" });
     },
     [data.members, toast],
+  );
+
+  const resendConfirmation: Ctx["resendConfirmation"] = useCallback(async (email) => {
+    if (!supabase) return;
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+      options: { emailRedirectTo: authRedirectUrl },
+    });
+    if (error) throw authError(error, "Impossible de renvoyer l'email pour le moment.");
+  }, []);
+
+  const requestPasswordReset: Ctx["requestPasswordReset"] = useCallback(async (email) => {
+    if (!supabase) throw new ApiError("La réinitialisation n'est pas disponible en mode local.");
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: authRedirectUrl });
+    if (error) throw authError(error, "Impossible d'envoyer le mail pour le moment.");
+  }, []);
+
+  const updatePassword: Ctx["updatePassword"] = useCallback(
+    async (password) => {
+      if (!supabase) throw new ApiError("La réinitialisation n'est pas disponible en mode local.");
+      const { data: auth } = await supabase.auth.getSession();
+      if (!auth.session) throw new ApiError("Ce lien a expiré. Redemande un nouveau lien.", "session_missing");
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw authError(error, "Impossible de changer le mot de passe.");
+      toast({ title: "Mot de passe mis à jour.", description: "Tu es connecté.", tone: "success" });
+    },
+    [toast],
   );
 
   const signOut = useCallback(() => {
@@ -1266,6 +1347,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     confirmingEmail: confirming === "working",
     signUp,
     signIn,
+    resendConfirmation,
+    requestPasswordReset,
+    updatePassword,
     signOut,
     updateProfile,
     createProject,
