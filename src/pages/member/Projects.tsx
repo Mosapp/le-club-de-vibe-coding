@@ -101,8 +101,13 @@ export default function ProjectsPage() {
       link: form.link.trim() || null,
     };
     try {
-      if (editingId) updateProject(editingId, payload);
-      else await createProject(payload);
+      if (editingId) {
+        const saved = await updateProject(editingId, payload);
+        if (!saved) {
+          setError("Impossible d'enregistrer le projet. Réessaie dans un instant.");
+          return;
+        }
+      } else await createProject(payload);
       setOpen(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Impossible d'enregistrer le projet.");
@@ -314,9 +319,8 @@ export default function ProjectsPage() {
                   <Button
                     variant="danger"
                     icon="trash"
-                    onClick={() => {
-                      deleteProject(detailProject.id);
-                      setDetail(null);
+                    onClick={async () => {
+                      if (await deleteProject(detailProject.id)) setDetail(null);
                     }}
                   >
                     Supprimer

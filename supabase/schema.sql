@@ -122,5 +122,8 @@ begin
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'projects') then
     alter publication supabase_realtime add table public.projects;
   end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'idea_votes') then
+    alter publication supabase_realtime add table public.idea_votes;
+  end if;
 end
 $$;

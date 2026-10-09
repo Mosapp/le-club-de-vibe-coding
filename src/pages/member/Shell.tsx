@@ -13,6 +13,7 @@ const NAV_ITEMS: { label: string; route: string; icon: IconName; mobile?: boolea
   { label: "Idées", route: "/app/idees", icon: "idea", mobile: true },
   { label: "Règlement", route: "/app/reglement", icon: "shield" },
   { label: "Profil", route: "/app/profil", icon: "user", mobile: true },
+  { label: "Galerie", route: "/galerie", icon: "image" },
 ];
 
 export function PageHeader({

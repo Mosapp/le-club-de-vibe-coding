@@ -21,8 +21,8 @@ export function Logo({ dark = false, className }: { dark?: boolean; className?: 
       className={cn("group inline-flex items-center gap-2.5", className)}
       aria-label={`${BRAND.name} — accueil`}
     >
-      <span className="relative flex h-8 w-8 overflow-hidden rounded-[9px] bg-ink transition-transform duration-300 group-hover:-translate-y-0.5">
-        <img src="./favicon.png" alt="" className="h-full w-full object-cover" />
+      <span className="relative flex h-8 w-8 overflow-hidden rounded-[9px] bg-ink">
+        <img src="./image.png" alt="" className="logo-mark h-full w-full object-contain transition-transform duration-500 ease-out group-hover:-translate-y-0.5 group-hover:rotate-[360deg] group-focus-visible:-translate-y-0.5 group-focus-visible:rotate-[360deg]" />
       </span>
       <span className={cn("flex flex-col leading-none", dark ? "text-white" : "text-ink")}>
         <span className="text-[14.5px] font-semibold tracking-[-0.02em]">Club de Vibe Coding</span>

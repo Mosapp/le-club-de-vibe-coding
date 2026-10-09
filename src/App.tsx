@@ -10,6 +10,7 @@ import Login from "@/pages/Login";
 
 /* Chargement à la demande : l'espace membre et l'admin ne sont
    téléchargés que lorsque la personne y accède. */
+const GalleryPage = lazy(() => import("@/pages/Gallery"));
 const MemberShell = lazy(() => import("@/pages/member/Shell").then((m) => ({ default: m.MemberShell })));
 const MemberHome = lazy(() => import("@/pages/member/Home"));
 const ProjectsPage = lazy(() => import("@/pages/member/Projects"));
@@ -78,6 +79,7 @@ function Routes() {
   if (path === "/" || path === "") return <Landing />;
   if (path === "/join") return <Join />;
   if (path === "/login") return <Login />;
+  if (path === "/galerie") return <GalleryPage />;
 
   if (path.startsWith("/app")) {
     const sub = path.replace("/app", "") || "/";

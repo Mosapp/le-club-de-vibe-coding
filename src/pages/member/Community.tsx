@@ -57,10 +57,10 @@ export function IdeasPage() {
     return m ? `${m.firstName} ${m.lastName}` : "Membre du club";
   };
 
-  const submit = () => {
+  const submit = async () => {
     setError(null);
     try {
-      createIdea({ title: form.title.trim(), description: form.description.trim(), category: form.category });
+      await createIdea({ title: form.title.trim(), description: form.description.trim(), category: form.category });
       setForm({ title: "", description: "", category: "session" });
       setOpen(false);
     } catch (err) {

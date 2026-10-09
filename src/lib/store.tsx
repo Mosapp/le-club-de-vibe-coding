@@ -18,15 +18,14 @@ import { navigate } from "@/lib/router";
    COUCHE DONNÉES — CLUB DE VIBE CODING
    ------------------------------------------------------------------
    ⚠️ NOTE D'ARCHITECTURE
-   Ce projet est un front autonome (build en un seul fichier), il n'y a
-   donc pas encore de backend. Cette couche SIMULE un serveur :
+   Cette couche centralise l'accès au backend partagé et conserve un mode
+   local pour le développement sans configuration Supabase :
    - un « client API » central (api.*) qui valide les rôles ;
-   - une persistance locale pour ne rien perdre en rafraîchissant ;
+   - une persistance locale de secours pour le mode sans backend ;
    - aucune donnée fictive n'est injectée : projets, sessions et idées
      démarrent vides et affichent de vrais états vides.
 
-   En production, il faut brancher ces mêmes fonctions sur un backend
-   (auth serveur + contrôle de rôle côté serveur + uploads sécurisés).
+   En production, le contrôle de rôle reste côté base de données via RLS.
    Un rôle ne doit JAMAIS pouvoir être modifié depuis le navigateur.
 ------------------------------------------------------------------ */
 
@@ -261,9 +260,9 @@ interface Ctx {
   updateProfile: (patch: Partial<Pick<Member, "firstName" | "lastName" | "avatarUrl" | "level" | "goal" | "engagement" | "motivations">>) => void;
   /* projets */
   createProject: (input: Omit<Project, "id" | "authorId" | "createdAt" | "published">) => Promise<void>;
-  updateProject: (id: string, patch: Partial<Project>) => void;
-  deleteProject: (id: string) => void;
-  toggleProjectPublish: (id: string) => void;
+  updateProject: (id: string, patch: Partial<Project>) => Promise<boolean>;
+  deleteProject: (id: string) => Promise<boolean>;
+  toggleProjectPublish: (id: string) => Promise<boolean>;
   /* défis */
   createChallenge: (input: Omit<Challenge, "id" | "participants" | "createdAt">) => void;
   updateChallenge: (id: string, patch: Partial<Challenge>) => void;
@@ -275,7 +274,7 @@ interface Ctx {
   deleteSession: (id: string) => void;
   toggleAttendance: (id: string) => void;
   /* idées */
-  createIdea: (input: Pick<Idea, "title" | "description" | "category">) => void;
+  createIdea: (input: Pick<Idea, "title" | "description" | "category">) => Promise<void>;
   voteIdea: (id: string) => void;
   setIdeaStatus: (id: string, status: IdeaStatus) => void;
   deleteIdea: (id: string) => void;
@@ -355,19 +354,21 @@ export function ClubProvider({ children }: { children: ReactNode }) {
           if (cancelled) return;
         }
         setSessionId(auth.session.user.id);
-        const [membersRes, projectsRes] = await Promise.all([
+        const [membersRes, projectsRes, ideasRes, votesRes] = await Promise.all([
           sb.from("members").select("*"),
           sb.from("projects").select("*").order("created_at", { ascending: false }),
+          sb.from("ideas").select("*").order("created_at", { ascending: false }),
+          sb.from("idea_votes").select("idea_id, member_id"),
         ]);
         if (cancelled) return;
         // En cas d'erreur on GARDE ce qu'on a déjà (au lieu de tout vider en silence).
-        const failure = membersRes.error ?? projectsRes.error;
+        const failure = membersRes.error ?? projectsRes.error ?? ideasRes.error ?? votesRes.error;
         if (failure) {
           console.warn("[club] chargement des données partagées :", failure.message);
           if (!warned) {
             warned = true;
             toastRef.current({
-              title: "Impossible de charger les projets du club",
+              title: "Impossible de charger les contributions du club",
               description: failure.message,
               tone: "error",
             });
@@ -404,10 +405,29 @@ export function ClubProvider({ children }: { children: ReactNode }) {
               createdAt: project.created_at,
               published: project.published,
             }));
+        const votesByIdea = new Map<string, string[]>();
+        for (const vote of votesRes.data ?? []) {
+          const votes = votesByIdea.get(vote.idea_id) ?? [];
+          votes.push(vote.member_id);
+          votesByIdea.set(vote.idea_id, votes);
+        }
+        const ideas: Idea[] | null = ideasRes.error || votesRes.error
+          ? null
+          : (ideasRes.data ?? []).map((idea) => ({
+              id: idea.id,
+              title: idea.title,
+              description: idea.description,
+              category: idea.category,
+              authorId: idea.author_id,
+              votes: votesByIdea.get(idea.id) ?? [],
+              status: idea.status,
+              createdAt: idea.created_at,
+            }));
         setData((prev) => ({
           ...prev,
           ...(members ? { members } : {}),
           ...(projects ? { projects } : {}),
+          ...(ideas ? { ideas } : {}),
         }));
       } finally {
         inflight = false;
@@ -425,6 +445,8 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         .channel("club-shared-data")
         .on("postgres_changes", { event: "*", schema: "public", table: "members" }, () => void loadSharedData())
         .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, () => void loadSharedData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "ideas" }, () => void loadSharedData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "idea_votes" }, () => void loadSharedData())
         .subscribe();
     };
     const stopRealtime = () => {
@@ -678,6 +700,33 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const updateProfile: Ctx["updateProfile"] = useCallback(
     (patch) => {
       const m = requireMember();
+      if (supabase) {
+        const update = {
+          first_name: patch.firstName,
+          last_name: patch.lastName,
+          avatar_url: patch.avatarUrl,
+          level: patch.level,
+          goal: patch.goal,
+          engagement: patch.engagement,
+          motivations: patch.motivations,
+        };
+        void supabase.from("members").update(update).eq("id", m.id).select("id").maybeSingle().then(({ data: updated, error }) => {
+          if (error || !updated) {
+            toast({
+              title: "Impossible d'enregistrer le profil.",
+              description: error?.message ?? "Profil membre introuvable.",
+              tone: "error",
+            });
+            return;
+          }
+          setData((prev) => ({
+            ...prev,
+            members: prev.members.map((x) => (x.id === m.id ? { ...x, ...patch } : x)),
+          }));
+          toast({ title: "Profil mis à jour.", tone: "success" });
+        });
+        return;
+      }
       setData((prev) => ({
         ...prev,
         members: prev.members.map((x) => (x.id === m.id ? { ...x, ...patch } : x)),
@@ -750,39 +799,91 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   );
 
   const updateProject: Ctx["updateProject"] = useCallback(
-    (id, patch) => {
+    async (id, patch) => {
       const m = requireMember();
       const project = data.projects.find((p) => p.id === id);
       if (!project) throw new ApiError("Projet introuvable.");
       if (project.authorId !== m.id && m.role !== "ADMIN") throw new ApiError("Tu ne peux modifier que tes projets.");
+      if (supabase) {
+        const changes = {
+          title: patch.title,
+          description: patch.description,
+          kind: patch.kind,
+          tech: patch.tech,
+          media_slot: patch.mediaSlot,
+          image_url: patch.imageUrl,
+          link: patch.link,
+          published: patch.published,
+        };
+        const { data: updated, error } = await supabase.from("projects").update(changes).eq("id", id).select("id").maybeSingle();
+        if (error || !updated) {
+          toast({
+            title: "Impossible d'enregistrer le projet.",
+            description: error?.message ?? "Projet introuvable ou modification non autorisée.",
+            tone: "error",
+          });
+          return false;
+        }
+      }
       setData((prev) => ({
         ...prev,
         projects: prev.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       }));
       toast({ title: "Projet mis à jour.", tone: "success" });
+      return true;
     },
     [data.projects, requireMember, toast],
   );
 
   const deleteProject: Ctx["deleteProject"] = useCallback(
-    (id) => {
-      const m = requireAdmin();
+    async (id) => {
+      requireAdmin();
+      if (supabase) {
+        const { data: deleted, error } = await supabase.from("projects").delete().eq("id", id).select("id").maybeSingle();
+        if (error || !deleted) {
+          toast({
+            title: "Impossible de supprimer le projet.",
+            description: error?.message ?? "Projet introuvable ou suppression non autorisée.",
+            tone: "error",
+          });
+          return false;
+        }
+      }
       setData((prev) => ({ ...prev, projects: prev.projects.filter((p) => p.id !== id) }));
       toast({ title: "Projet supprimé.", tone: "info" });
-      void m;
+      return true;
     },
     [requireAdmin, toast],
   );
 
   const toggleProjectPublish: Ctx["toggleProjectPublish"] = useCallback(
-    (id) => {
+    async (id) => {
       requireAdmin();
+      const project = data.projects.find((p) => p.id === id);
+      if (!project) throw new ApiError("Projet introuvable.");
+      if (supabase) {
+        const { data: updated, error } = await supabase
+          .from("projects")
+          .update({ published: !project.published })
+          .eq("id", id)
+          .select("id")
+          .maybeSingle();
+        if (error || !updated) {
+          toast({
+            title: "Impossible de changer la publication.",
+            description: error?.message ?? "Projet introuvable ou modification non autorisée.",
+            tone: "error",
+          });
+          return false;
+        }
+      }
       setData((prev) => ({
         ...prev,
-        projects: prev.projects.map((p) => (p.id === id ? { ...p, published: !p.published } : p)),
+        projects: prev.projects.map((p) => (p.id === id ? { ...p, published: !project.published } : p)),
       }));
+      return true;
     },
-    [requireAdmin],
+    [data.projects, requireAdmin, toast],
   );
 
   /* ----------------------------- DÉFIS --------------------------- */
@@ -901,9 +1002,43 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   /* ----------------------------- IDÉES --------------------------- */
 
   const createIdea: Ctx["createIdea"] = useCallback(
-    (input) => {
+    async (input) => {
       const m = requireMember();
       if (!input.title.trim()) throw new ApiError("Ton idée a besoin d'un titre.");
+      if (supabase) {
+        const { data: idea, error } = await supabase
+          .from("ideas")
+          .insert({
+            title: input.title,
+            description: input.description,
+            category: input.category,
+            author_id: m.id,
+          })
+          .select()
+          .single();
+        if (error || !idea) throw new ApiError(error?.message ?? "Impossible d'enregistrer ton idée.");
+        const { error: voteError } = await supabase.from("idea_votes").insert({ idea_id: idea.id, member_id: m.id });
+        if (voteError) {
+          toast({
+            title: "Idée publiée, mais vote initial non enregistré.",
+            description: voteError.message,
+            tone: "error",
+          });
+        }
+        const created: Idea = {
+          id: idea.id,
+          title: idea.title,
+          description: idea.description,
+          category: idea.category,
+          authorId: idea.author_id,
+          votes: voteError ? [] : [m.id],
+          status: idea.status,
+          createdAt: idea.created_at,
+        };
+        setData((prev) => ({ ...prev, ideas: [created, ...prev.ideas] }));
+        toast({ title: "Idée ajoutée à la boîte.", tone: "success" });
+        return;
+      }
       setData((prev) => ({
         ...prev,
         ideas: [
@@ -929,6 +1064,22 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       const idea = data.ideas.find((item) => item.id === id);
       if (!idea) throw new ApiError("Proposition introuvable.");
       if (idea.votes.includes(m.id)) throw new ApiError("Tu as déjà voté pour cette proposition.");
+      if (supabase) {
+        void supabase.from("idea_votes").insert({ idea_id: id, member_id: m.id }).then(({ error }) => {
+          if (error) {
+            toast({ title: "Impossible d'enregistrer le vote.", description: error.message, tone: "error" });
+            return;
+          }
+          setData((prev) => ({
+            ...prev,
+            ideas: prev.ideas.map((item) =>
+              item.id === id && !item.votes.includes(m.id) ? { ...item, votes: [...item.votes, m.id] } : item,
+            ),
+          }));
+          toast({ title: "Vote enregistré.", description: "Tu ne peux voter qu'une seule fois pour cette proposition.", tone: "success" });
+        });
+        return;
+      }
       setData((prev) => ({
         ...prev,
         ideas: prev.ideas.map((idea) => {
@@ -944,14 +1095,43 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const setIdeaStatus: Ctx["setIdeaStatus"] = useCallback(
     (id, status) => {
       requireAdmin();
+      if (supabase) {
+        void supabase.from("ideas").update({ status }).eq("id", id).select("id").maybeSingle().then(({ data: updated, error }) => {
+          if (error || !updated) {
+            toast({
+              title: "Impossible de modifier l'idée.",
+              description: error?.message ?? "Proposition introuvable ou modification non autorisée.",
+              tone: "error",
+            });
+            return;
+          }
+          setData((prev) => ({ ...prev, ideas: prev.ideas.map((i) => (i.id === id ? { ...i, status } : i)) }));
+        });
+        return;
+      }
       setData((prev) => ({ ...prev, ideas: prev.ideas.map((i) => (i.id === id ? { ...i, status } : i)) }));
     },
-    [requireAdmin],
+    [requireAdmin, toast],
   );
 
   const deleteIdea: Ctx["deleteIdea"] = useCallback(
     (id) => {
       requireAdmin();
+      if (supabase) {
+        void supabase.from("ideas").delete().eq("id", id).select("id").maybeSingle().then(({ data: deleted, error }) => {
+          if (error || !deleted) {
+            toast({
+              title: "Impossible de supprimer l'idée.",
+              description: error?.message ?? "Proposition introuvable ou suppression non autorisée.",
+              tone: "error",
+            });
+            return;
+          }
+          setData((prev) => ({ ...prev, ideas: prev.ideas.filter((i) => i.id !== id) }));
+          toast({ title: "Idée supprimée.", tone: "info" });
+        });
+        return;
+      }
       setData((prev) => ({ ...prev, ideas: prev.ideas.filter((i) => i.id !== id) }));
       toast({ title: "Idée supprimée.", tone: "info" });
     },

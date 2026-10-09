@@ -22,6 +22,7 @@ export const NAV = {
     { label: "Projets", href: "#projets" },
     { label: "Défis", href: "#defis" },
     { label: "Sessions", href: "#sessions" },
+   { label: "Galerie", href: "/galerie" },
   ],
   member: [
     { label: "Accueil", route: "/app" },
