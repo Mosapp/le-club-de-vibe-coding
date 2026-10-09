@@ -19,6 +19,7 @@ const ChallengesPage = lazy(() => import("@/pages/member/Participate").then((m) 
 const SessionsPage = lazy(() => import("@/pages/member/Participate").then((m) => ({ default: m.SessionsPage })));
 const IdeasPage = lazy(() => import("@/pages/member/Community").then((m) => ({ default: m.IdeasPage })));
 const RulesPage = lazy(() => import("@/pages/member/Community").then((m) => ({ default: m.RulesPage })));
+const PhotographerPage = lazy(() => import("@/pages/member/Photographer"));
 const ProfilePage = lazy(() => import("@/pages/member/Profile"));
 const AdminShell = lazy(() => import("@/pages/admin/Shell").then((m) => ({ default: m.AdminShell })));
 const AdminDashboard = lazy(() => import("@/pages/admin/Overview").then((m) => ({ default: m.AdminDashboard })));
@@ -106,6 +107,8 @@ function Routes() {
           );
         case "/profil":
           return <MemberShell><ProfilePage /></MemberShell>;
+        case "/photographe":
+          return <MemberShell><PhotographerPage /></MemberShell>;
         default:
           return <NotFound />;
       }

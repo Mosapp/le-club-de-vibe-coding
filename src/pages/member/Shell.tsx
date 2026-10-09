@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Logo } from "@/components/layout";
 import { Button, Icon, type IconName } from "@/components/ui";
 import { navigate, useRoute, useRouterLink } from "@/lib/router";
+import { useIsPhotographer } from "@/lib/gallery";
 import { initials, useClub } from "@/lib/store";
 import { cn } from "@/utils/cn";
 
@@ -54,6 +55,11 @@ export function MemberShell({
   const route = useRoute();
   const go = useRouterLink();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isPhotographer = useIsPhotographer() === true;
+  // « Photographe » n'apparaît dans le menu que pour les photographes (et les admins)
+  const items = isPhotographer
+    ? [...NAV_ITEMS, { label: "Photographe", route: "/app/photographe", icon: "image" as IconName }]
+    : NAV_ITEMS;
 
   useEffect(() => {
     if (!me && !allowAnonymous) navigate("/login", { replace: true });
@@ -70,7 +76,7 @@ export function MemberShell({
         <Logo />
 
         <nav className="mt-10 flex flex-1 flex-col gap-0.5">
-          {NAV_ITEMS.map((item) => (
+          {items.map((item) => (
             <a
               key={item.route}
               href={`#${item.route}`}
@@ -169,7 +175,7 @@ export function MemberShell({
         {menuOpen && (
           <div className="anim-fade border-b border-line bg-surface px-5 py-5 lg:hidden">
             <nav className="grid gap-1">
-              {NAV_ITEMS.map((item) => (
+              {items.map((item) => (
                 <a
                   key={item.route}
                   href={`#${item.route}`}
@@ -213,7 +219,7 @@ export function MemberShell({
 
       {/* ---------------- nav mobile bas ---------------- */}
       <nav className="pill-nav fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] z-40 grid grid-cols-6 gap-0.5 rounded-2xl border border-line bg-surface/95 p-1.5 backdrop-blur-md lg:hidden">
-        {NAV_ITEMS.filter((i) => i.mobile).map((item) => (
+        {items.filter((i) => i.mobile).map((item) => (
           <a
             key={item.route}
             href={`#${item.route}`}

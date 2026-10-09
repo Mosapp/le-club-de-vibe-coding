@@ -244,3 +244,26 @@ export function usePhotographers(enabled: boolean) {
 
   return { ids, loading, setPhotographer };
 }
+
+/* Est-ce que le membre connecté peut publier ? null = vérification en cours. */
+export function useIsPhotographer(): boolean | null {
+  const { me } = useClub();
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const meId = me?.id;
+  useEffect(() => {
+    const sb = supabase;
+    let off = false;
+    if (!sb || !meId) {
+      setAllowed(false);
+      return;
+    }
+    setAllowed(null);
+    void sb.rpc("is_photographer").then(({ data, error }) => {
+      if (!off) setAllowed(!error && data === true);
+    });
+    return () => {
+      off = true;
+    };
+  }, [meId]);
+  return allowed;
+}
