@@ -13,6 +13,7 @@ const ADMIN_NAV: { label: string; route: string; icon: IconName }[] = [
   { label: "Sessions", route: "/admin/sessions", icon: "calendar" },
   { label: "Idées", route: "/admin/idees", icon: "idea" },
   { label: "Règlement", route: "/admin/reglement", icon: "shield" },
+  { label: "Photographes", route: "/admin/photographes", icon: "image" },
   { label: "Media Library", route: "/admin/medias", icon: "image" },
 ];
 

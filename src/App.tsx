@@ -28,6 +28,7 @@ const AdminIdeas = lazy(() => import("@/pages/admin/Manage").then((m) => ({ defa
 const AdminMedia = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminMedia })));
 const AdminProjects = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminProjects })));
 const AdminRules = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminRules })));
+const AdminPhotographers = lazy(() => import("@/pages/admin/Photographers").then((m) => ({ default: m.AdminPhotographers })));
 const AdminSessions = lazy(() => import("@/pages/admin/Manage").then((m) => ({ default: m.AdminSessions })));
 
 function PageLoader() {
@@ -155,6 +156,12 @@ function Routes() {
         return (
           <AdminShell>
             <AdminRules />
+          </AdminShell>
+        );
+      case "/photographes":
+        return (
+          <AdminShell>
+            <AdminPhotographers />
           </AdminShell>
         );
       case "/medias":
