@@ -630,7 +630,7 @@ button:active {
 
 
 /* ==================================================================
-   ÉNIGME D'HALLOWEEN (porte d'entrée)
+   HALLOWEEN CODE MYSTERY (porte d'entrée)
 ================================================================== */
 
 .hw-scene {
@@ -713,26 +713,98 @@ button:active {
   transition: transform 0.8s var(--ease-out-soft), box-shadow 0.8s ease, border-color 0.8s ease;
 }
 .hw-card-open {
-  border-color: rgba(134, 239, 172, 0.45);
+  border-color: rgba(255, 179, 71, 0.6);
   box-shadow: 0 0 90px -10px rgba(255, 179, 71, 0.55);
 }
-.hw-scene.is-solved .hw-card {
-  transform: perspective(900px) rotateX(6deg) scale(0.98);
+
+.hw-input {
+  border: 1px solid var(--color-line);
+  background: #0a1017;
+  color: var(--color-ink);
+}
+.hw-input::placeholder {
+  color: var(--color-faint);
+}
+.hw-input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgba(240, 102, 47, 0.25);
+}
+.hw-vault {
+  padding-left: 0.6em; /* compense le letter-spacing pour centrer les chiffres */
 }
 
-.hw-initial {
-  transition: color 0.4s ease, text-shadow 0.4s ease;
+.hw-code {
+  font-family: var(--font-mono);
+  color: #ffd36b;
+  text-shadow: 0 0 14px rgba(255, 179, 71, 0.45);
 }
-.hw-initial.is-glow {
+
+.hw-pre {
+  font-family: var(--font-mono);
+  background: #05080c;
+  border: 1px solid var(--color-line);
+  color: #cfe3f1;
+}
+
+.hw-door {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border-left: 4px solid;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 14px;
+}
+.hw-door-red {
+  border-color: #e0413a;
+}
+.hw-door-blue {
+  border-color: #4a9ef0;
+}
+.hw-door-black {
+  border-color: #6b7280;
+}
+
+.hw-choice {
+  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.hw-choice:hover {
+  border-color: rgba(240, 102, 47, 0.5);
+}
+.hw-choice:has(input:focus-visible) {
+  outline: 2px solid var(--color-violet);
+  outline-offset: 2px;
+}
+.hw-choice.is-picked {
+  border-color: var(--color-brand);
+  background: rgba(240, 102, 47, 0.1);
+}
+.hw-letter {
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+}
+.hw-choice.is-picked .hw-letter {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #fff;
+}
+
+.hw-reward {
+  background: linear-gradient(135deg, rgba(255, 179, 71, 0.14), rgba(240, 102, 47, 0.08));
+  border: 1px solid rgba(255, 179, 71, 0.35);
+}
+.hw-rules summary::marker {
   color: var(--color-brand);
-  font-weight: 700;
-  font-style: normal;
-  text-shadow: 0 0 12px rgba(240, 102, 47, 0.8);
+}
+.hw-stat {
+  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.hw-hint {
-  background: rgba(240, 102, 47, 0.08);
-  border: 1px dashed rgba(240, 102, 47, 0.3);
+.hw-sealing {
+  transform: scale(0.98);
+  opacity: 0.7;
 }
 
 .hw-btn {
@@ -745,9 +817,6 @@ button:active {
   box-shadow: 0 12px 36px -8px rgba(240, 102, 47, 0.85);
 }
 
-.hw-shake {
-  animation: hw-shake 0.45s ease-in-out;
-}
 
 @keyframes hw-twinkle {
   to {
@@ -787,16 +856,6 @@ button:active {
   }
   75% {
     opacity: 0.75;
-  }
-}
-@keyframes hw-shake {
-  20%,
-  60% {
-    transform: translateX(-8px);
-  }
-  40%,
-  80% {
-    transform: translateX(8px);
   }
 }
 
