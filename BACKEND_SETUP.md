@@ -60,7 +60,7 @@ Les défis, sessions et regles du club restent stockes localement dans cette ver
 
 Le serveur garantit alors :
 
-- un nom = une seule participation, et 5 tentatives maximum comptées côté serveur ;
+- un nom = une seule participation, et 10 tentatives maximum comptées côté serveur ;
 - chaque détective qui atteint 5/10 reçoit un mot de la phrase secrète (n°1 à 10, puis on recommence) ;
 - le lien du trésor n'est jamais dans le code du site : il n'est envoyé qu'à un détective qui tape la phrase complète (10 essais).
 
