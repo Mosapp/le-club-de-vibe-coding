@@ -1,6 +1,7 @@
 -- 🎃 Halloween Code Mystery : participants, fragments de la phrase secrète et trésor.
--- À exécuter UNE fois dans Supabase > SQL Editor.
--- Sans danger si tu le relances : tout est "if not exists" / "create or replace".
+-- À exécuter dans Supabase > SQL Editor (et à RELANCER après chaque mise à jour de ce fichier).
+-- Sans danger si tu le relances : tout est "if not exists" / "create or replace",
+-- et le lien du trésor déjà enregistré n'est pas écrasé.
 --
 -- AVANT D'EXÉCUTER : remplace COLLE_ICI_LE_LIEN_CLAUDE_CODE (tout en bas, étape 6)
 -- par le vrai lien du trésor. Tu peux aussi le changer plus tard avec :
@@ -8,7 +9,7 @@
 --
 -- Ce que le serveur garantit :
 --   - un nom = une seule participation (et un appareil = un seul participant) ;
---   - 5 tentatives maximum, comptées ici et pas dans le navigateur ;
+--   - 10 tentatives maximum, comptées ici et pas dans le navigateur ;
 --   - chaque détective qui atteint 5/10 reçoit UN mot de la phrase (n°1, 2, … 10, puis on recommence) ;
 --   - le lien du trésor n'est jamais envoyé au site, sauf à un détective qui donne la phrase complète.
 --
@@ -64,7 +65,7 @@ as $$
   select json_build_object(
     'name', v.name,
     'attempts', v.attempts,
-    'max', 5,
+    'max', 10,
     'passed', v.passed_at is not null,
     'fragment', v.fragment,
     'word', case when v.passed_at is not null and v.fragment is not null
@@ -130,7 +131,7 @@ begin
   if v.passed_at is not null then
     return public.halloween_state(v);
   end if;
-  if v.attempts >= 5 then
+  if v.attempts >= 10 then
     raise exception 'no_attempts_left';
   end if;
 

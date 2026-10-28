@@ -10,7 +10,7 @@ import { finishAttempt, startPlayer } from "@/lib/halloween";
    Porte d'entrée du site : 10 épreuves à résoudre dans l'ordre
    (les épreuves sont dans halloween-trials.tsx, le coffre ici).
    - Il faut au moins PASS_SCORE/10 (5/10) pour entrer sur le site.
-   - 5 tentatives maximum ; après 5 échecs, le site reste fermé.
+   - 10 tentatives maximum ; après 10 échecs, le site reste fermé.
    - Dans une tentative, une réponse validée est définitive et on ne
      dit pas quelles réponses sont fausses (seulement le score).
    - Dès qu'une tentative atteint le seuil, la personne entre : pas de
@@ -21,7 +21,7 @@ import { finishAttempt, startPlayer } from "@/lib/halloween";
      à l'organisateur, puis elle entre sur le site.
    - Quand Supabase est en place (supabase/migration-halloween.sql),
      le serveur a le dernier mot : un nom = une seule participation,
-     5 tentatives comptées côté serveur. Sans lui, le jeu reste local.
+     10 tentatives comptées côté serveur. Sans lui, le jeu reste local.
    - Une fois sur le site : mot de bienvenue + fragment de la phrase
      secrète, puis l'épreuve ultime (halloween-ultimate.tsx).
    Attention : les réponses des 10 épreuves sont dans le code du site ;
@@ -32,7 +32,7 @@ import { finishAttempt, startPlayer } from "@/lib/halloween";
 const STORAGE_KEY = "cvc/halloween-mystery/v3";
 
 const TOTAL = TRIALS.length + 1;
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 10;
 /** score minimum (sur TOTAL) pour entrer sur le site */
 const PASS_SCORE = 5;
 
@@ -618,9 +618,6 @@ function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () =>
     `Détective : ${progress.name}`,
     `Score : ${score}/${TOTAL} à la tentative ${progress.attempt}/${MAX_ATTEMPTS}`,
     ...(progress.history.length ? [`Scores des tentatives ratées : ${progress.history.map((h) => `${h}/${TOTAL}`).join(", ")}`] : []),
-    "Réponses :",
-    ...progress.answers.map((a, i) => `  É${i + 1} ${TRIALS[i].title} : ${TRIALS[i].show(a)}`),
-    `Code du coffre : ${progress.vault}`,
     `Temps de la tentative : ${duration}`,
     `Temps total depuis le début : ${total}`,
     `Terminé le : ${date}`,
