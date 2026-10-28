@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/utils/cn";
+import { LETTERS, TRIALS, VAULT_CODE, type Answer, type Trial } from "@/components/halloween-trials";
 
 /* ==================================================================
    🎃 HALLOWEEN CODE MYSTERY — « Le secret du code maudit »
-   Porte d'entrée du site : 5 épreuves à résoudre dans l'ordre.
+   Porte d'entrée du site : 10 épreuves à résoudre dans l'ordre
+   (les épreuves sont dans halloween-trials.tsx, le coffre ici).
    - Une réponse validée est définitive (une seule participation).
    - La progression est gardée dans le navigateur : recharger la page
      ne remet ni le chrono ni les réponses à zéro.
@@ -15,113 +17,8 @@ import { cn } from "@/utils/cn";
    (confirmation, nouveau mot de passe) ne sont jamais bloqués.
 ================================================================== */
 
-const STORAGE_KEY = "cvc/halloween-mystery/v1";
+const STORAGE_KEY = "cvc/halloween-mystery/v2";
 
-type Trial = {
-  icon: string;
-  title: string;
-  intro: ReactNode;
-  question: string;
-  choices: string[];
-  answer: number; // index de la bonne réponse
-};
-
-const LETTERS = ["A", "B", "C", "D"];
-
-const TRIALS: Trial[] = [
-  {
-    icon: "👁️",
-    title: "Le regard de la citrouille",
-    intro: (
-      <>
-        <p>Une citrouille mystérieuse affiche cette suite :</p>
-        <p className="hw-code mt-3 text-center text-[clamp(1.3rem,6vw,1.8rem)] font-semibold tracking-[0.12em]">
-          2 — 4 — 8 — 16 — ?
-        </p>
-      </>
-    ),
-    question: "Quel nombre complète cette suite ?",
-    choices: ["18", "24", "32", "36"],
-    answer: 2,
-  },
-  {
-    icon: "👻",
-    title: "Le message du fantôme",
-    intro: (
-      <>
-        <p>Le fantôme a laissé ce message codé :</p>
-        <p className="hw-code mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-center text-[clamp(0.95rem,4vw,1.15rem)]">
-          <span>01000011</span>
-          <span>01001111</span>
-          <span>01000100</span>
-          <span>01000101</span>
-        </p>
-        <p className="mt-3">Chaque groupe représente une lettre en code binaire ASCII.</p>
-      </>
-    ),
-    question: "Quel mot obtiens-tu ?",
-    choices: ["CODE", "GAME", "CAVE", "MODE"],
-    answer: 0,
-  },
-  {
-    icon: "🚪",
-    title: "La porte hantée",
-    intro: (
-      <>
-        <p>Trois portes sont devant toi.</p>
-        <ul className="mt-3 space-y-2">
-          <li className="hw-door hw-door-red">
-            <b>Porte rouge :</b> « Le trésor n'est pas derrière la porte rouge. »
-          </li>
-          <li className="hw-door hw-door-blue">
-            <b>Porte bleue :</b> « Le trésor est derrière la porte rouge. »
-          </li>
-          <li className="hw-door hw-door-black">
-            <b>Porte noire :</b> « Le trésor n'est pas derrière la porte bleue. »
-          </li>
-        </ul>
-        <p className="mt-3">
-          Une <b className="text-ink">seule</b> de ces trois affirmations est vraie.
-        </p>
-      </>
-    ),
-    question: "Derrière quelle porte se trouve le trésor ?",
-    choices: ["La porte rouge", "La porte bleue", "La porte noire"],
-    answer: 1,
-  },
-  {
-    icon: "💀",
-    title: "Le crâne des développeurs",
-    intro: (
-      <>
-        <p>
-          Le fantôme programmeur a laissé un code C++ hanté. Il veut afficher le message{" "}
-          <b className="text-ink">HAPPY HALLOWEEN</b>, mais une erreur empêche le programme de fonctionner.
-        </p>
-        <pre className="hw-pre mt-3 whitespace-pre-wrap break-words rounded-xl p-3.5 text-[12.5px] leading-relaxed sm:p-4 sm:text-[13px]">
-          <code>{`#include <iostream>
-using namespace std;
-
-int main() {
-    cout << "HAPPY HALLOWEEN" << endl
-    return 0;
-}`}</code>
-        </pre>
-      </>
-    ),
-    question: "Quelle est l'erreur dans ce programme ?",
-    choices: [
-      "Il manque un point-virgule (;) après endl.",
-      "Il faut remplacer cout par cin.",
-      "Il faut supprimer int main().",
-      "Il faut remplacer #include <iostream> par #include <string>.",
-    ],
-    answer: 0,
-  },
-];
-
-/* Code du coffre : position (1, 2, 3…) de chaque bonne réponse */
-const VAULT_CODE = TRIALS.map((t) => t.answer + 1).join("");
 const TOTAL = TRIALS.length + 1;
 
 const RULES = [
@@ -134,7 +31,7 @@ const RULES = [
 type Progress = {
   name: string;
   startedAt: number;
-  answers: number[];
+  answers: Answer[];
   vault?: string;
   finishedAt?: number;
   entered?: boolean;
@@ -164,7 +61,7 @@ function formatDuration(ms: number) {
 }
 
 function scoreOf(p: Progress) {
-  const good = p.answers.filter((a, i) => a === TRIALS[i].answer).length;
+  const good = p.answers.filter((a, i) => TRIALS[i].isCorrect(a)).length;
   return good + (p.vault === VAULT_CODE ? 1 : 0);
 }
 
@@ -247,11 +144,14 @@ function MysteryScreen({ progress, onChange }: { progress: Progress | null; onCh
   useEffect(() => {
     if (step <= 0) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    topRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    const el = topRef.current;
+    if (!el) return;
+    // window.scrollTo (et non scrollIntoView) : jamais de décalage horizontal sur mobile
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: reduce ? "auto" : "smooth" });
   }, [step]);
 
   return (
-    <main className="theme-dark hw-scene relative min-h-dvh overflow-hidden text-ink">
+    <main className="theme-dark hw-scene relative min-h-dvh overflow-clip text-ink">
       <Scenery />
 
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center px-4 py-10 sm:px-6">
@@ -266,7 +166,7 @@ function MysteryScreen({ progress, onChange }: { progress: Progress | null; onCh
           Le secret du <span className="hw-flicker text-brand">code maudit</span>
         </h1>
 
-        <div ref={topRef} className="w-full scroll-mt-4" />
+        <div ref={topRef} className="w-full" />
 
         {step >= 0 && step < TOTAL && <Steps current={step} />}
 
@@ -309,14 +209,14 @@ function MysteryScreen({ progress, onChange }: { progress: Progress | null; onCh
 
 function Steps({ current }: { current: number }) {
   return (
-    <ol className="mt-6 flex items-center gap-1.5" aria-label={`Épreuve ${current + 1} sur ${TOTAL}`}>
+    <ol className="mt-6 flex flex-wrap items-center justify-center gap-1.5" aria-label={`Épreuve ${current + 1} sur ${TOTAL}`}>
       {Array.from({ length: TOTAL }, (_, i) => (
         <li
           key={i}
           aria-hidden="true"
           className={cn(
             "h-1.5 rounded-full transition-all duration-500",
-            i < current ? "w-6 bg-brand" : i === current ? "w-10 bg-brand-ink" : "w-6 bg-line"
+            i < current ? "w-4 bg-brand sm:w-6" : i === current ? "w-8 bg-brand-ink sm:w-10" : "w-4 bg-line sm:w-6"
           )}
         />
       ))}
@@ -349,7 +249,7 @@ function Intro({ onStart }: { onStart: (name: string) => void }) {
       <p className="text-[15px] leading-relaxed text-ink-2">
         Une mystérieuse entité a piraté le site du club et enfermé une récompense dans un{" "}
         <b className="text-ink">coffre numérique</b>. Pour la récupérer, tu dois réussir{" "}
-        <b className="text-ink">cinq épreuves</b>, découvrir les indices cachés et déverrouiller le coffre.
+        <b className="text-ink">dix épreuves</b> (logique, code, électronique et Arduino), découvrir les indices cachés et déverrouiller le coffre.
       </p>
 
       <div className="hw-reward mt-5 flex items-start gap-3 rounded-xl p-4">
@@ -403,18 +303,20 @@ function Intro({ onStart }: { onStart: (name: string) => void }) {
   );
 }
 
-/* ---- Épreuves 1 à 4 (QCM) ---- */
+/* ---- Épreuves 1 à 9 (QCM et épreuves interactives) ---- */
 
-function TrialCard({ index, trial, onAnswer }: { index: number; trial: Trial; onAnswer: (choice: number) => void }) {
-  const [choice, setChoice] = useState<number | null>(null);
+function TrialCard({ index, trial, onAnswer }: { index: number; trial: Trial; onAnswer: (value: Answer) => void }) {
+  const [value, setValue] = useState<Answer | undefined>(undefined);
   const [locking, setLocking] = useState(false);
+  const ready = trial.isReady(value);
+  const { Widget } = trial;
 
   const confirm = () => {
-    if (choice === null || locking) return;
+    if (!ready || value === undefined || locking) return;
     haptic(20);
     setLocking(true);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.setTimeout(() => onAnswer(choice), reduce ? 0 : 450);
+    window.setTimeout(() => onAnswer(value), reduce ? 0 : 450);
   };
 
   return (
@@ -428,47 +330,32 @@ function TrialCard({ index, trial, onAnswer }: { index: number; trial: Trial; on
       <h2 className="mt-2 text-[clamp(1.25rem,5vw,1.55rem)] font-bold leading-tight text-ink">{trial.title}</h2>
       <div className="mt-4 text-[15px] leading-relaxed text-ink-2">{trial.intro}</div>
 
-      <fieldset className="mt-5">
+      <fieldset className="mt-5 min-w-0">
         <legend className="text-[15px] font-semibold text-ink">{trial.question}</legend>
-        <div className="mt-3 grid gap-2.5">
-          {trial.choices.map((c, i) => (
-            <label
-              key={c}
-              className={cn(
-                "hw-choice flex cursor-pointer items-start gap-3 rounded-xl p-3.5 text-[14.5px] leading-snug",
-                choice === i && "is-picked"
-              )}
-            >
-              <input
-                type="radio"
-                name={`trial-${index}`}
-                className="sr-only"
-                checked={choice === i}
-                onChange={() => setChoice(i)}
-                disabled={locking}
-              />
-              <span className="hw-letter flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-[13px] font-semibold">
-                {LETTERS[i]}
-              </span>
-              <span className="pt-0.5 break-words">{c}</span>
-            </label>
-          ))}
+        <div className="mt-3">
+          <Widget value={value} onChange={setValue} disabled={locking} />
         </div>
       </fieldset>
 
       <button
         type="button"
         onClick={confirm}
-        disabled={choice === null || locking}
+        disabled={!ready || locking}
         className="hw-btn mt-5 inline-flex h-12 w-full items-center justify-center rounded-xl px-5 text-[15px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
       >
-        {locking ? "Réponse scellée… 🕯️" : choice === null ? "Choisis une réponse" : `Valider la réponse ${LETTERS[choice]}`}
+        {locking
+          ? "Réponse scellée… 🕯️"
+          : !ready
+            ? "Complète ta réponse"
+            : typeof value === "number" && "choices" in trial
+              ? `Valider la réponse ${LETTERS[value]}`
+              : "Valider ma réponse"}
       </button>
     </Card>
   );
 }
 
-/* ---- Épreuve 5 : le coffre ---- */
+/* ---- Épreuve 10 : le coffre ---- */
 
 function VaultCard({ onSubmit }: { onSubmit: (code: string) => void }) {
   const [code, setCode] = useState("");
@@ -494,8 +381,8 @@ function VaultCard({ onSubmit }: { onSubmit: (code: string) => void }) {
       </div>
       <h2 className="mt-2 text-[clamp(1.25rem,5vw,1.55rem)] font-bold leading-tight text-ink">Le coffre maudit</h2>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-2">
-        Tu as terminé les quatre premières épreuves. Tu dois maintenant entrer le code final. Pour le former, récupère les
-        chiffres associés aux <b className="text-ink">bonnes réponses</b> :
+        Tu as terminé les neuf premières épreuves. Tu dois maintenant entrer le code final. Pour le former, récupère les
+        chiffres associés aux <b className="text-ink">bonnes réponses des épreuves 1 à 4</b> :
       </p>
       <ul className="mt-3 space-y-1.5 text-[14px] leading-relaxed text-muted">
         <li>• Épreuve 1 : position de la bonne réponse parmi A, B, C, D.</li>
@@ -553,7 +440,8 @@ function ResultCard({ progress, onEnter }: { progress: Progress; onEnter: () => 
   const summary = [
     "🎃 Halloween Code Mystery — Club de Vibe Coding du LPELIA",
     `Détective : ${progress.name}`,
-    `Réponses : ${progress.answers.map((a, i) => `É${i + 1}-${LETTERS[a]}`).join(" · ")}`,
+    "Réponses :",
+    ...progress.answers.map((a, i) => `  É${i + 1} ${TRIALS[i].title} : ${TRIALS[i].show(a)}`),
     `Code du coffre : ${progress.vault}`,
     `Score : ${score}/${TOTAL}`,
     `Temps : ${duration}`,
