@@ -51,6 +51,8 @@
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    /* Aucun décor (halos flous…) ne peut créer de défilement horizontal ; "clip" garde le position: sticky intact */
+    overflow-x: clip;
   }
 
   body {
@@ -306,6 +308,20 @@
 
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Très petits écrans (iPhone SE, Android compacts) : un peu plus d'espace utile */
+@media (max-width: 359px) {
+  .container-x {
+    padding-inline: 16px;
+  }
+}
+
+/* Les mots très longs ne doivent jamais faire déborder l'écran */
+h1,
+h2,
+h3 {
+  overflow-wrap: break-word;
 }
 
 @media (max-width: 767px) {
@@ -610,4 +626,187 @@ button:active {
   border-color: rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.1);
   color: #fca5a5;
+}
+
+
+/* ==================================================================
+   ÉNIGME D'HALLOWEEN (porte d'entrée)
+================================================================== */
+
+.hw-scene {
+  background:
+    radial-gradient(60% 45% at 50% 100%, rgba(240, 102, 47, 0.22), transparent 70%),
+    radial-gradient(70% 50% at 50% 0%, rgba(88, 50, 140, 0.35), transparent 70%),
+    #06080d;
+}
+
+.hw-stars {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff8, transparent),
+    radial-gradient(1px 1px at 28% 62%, #fff6, transparent),
+    radial-gradient(1.5px 1.5px at 44% 12%, #fff9, transparent),
+    radial-gradient(1px 1px at 66% 38%, #fff7, transparent),
+    radial-gradient(1.5px 1.5px at 82% 70%, #fff6, transparent),
+    radial-gradient(1px 1px at 92% 14%, #fff8, transparent),
+    radial-gradient(1px 1px at 6% 82%, #fff5, transparent),
+    radial-gradient(1px 1px at 55% 88%, #fff4, transparent);
+  animation: hw-twinkle 5s ease-in-out infinite alternate;
+}
+
+.hw-moon {
+  top: 6%;
+  right: 8%;
+  width: clamp(70px, 16vw, 140px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff7e0, #f3d9a4 55%, #c9a66b);
+  box-shadow: 0 0 60px 10px rgba(255, 220, 150, 0.25), 0 0 160px 40px rgba(255, 190, 120, 0.12);
+  opacity: 0.9;
+}
+
+.hw-bat {
+  position: absolute;
+  color: #1c1626;
+  filter: drop-shadow(0 0 8px rgba(240, 102, 47, 0.45));
+  animation: hw-fly 9s ease-in-out infinite;
+}
+
+.hw-fog {
+  height: 45vh;
+  background:
+    radial-gradient(40% 60% at 20% 100%, rgba(180, 190, 220, 0.14), transparent 70%),
+    radial-gradient(45% 55% at 75% 100%, rgba(180, 190, 220, 0.12), transparent 70%);
+  animation: hw-drift 18s ease-in-out infinite alternate;
+}
+.hw-fog-2 {
+  animation-duration: 26s;
+  animation-direction: alternate-reverse;
+  opacity: 0.7;
+}
+
+.hw-pumpkin {
+  width: 100%;
+  height: auto;
+  animation: vc-float 6s ease-in-out infinite;
+}
+.hw-face {
+  fill: #2a1206;
+  transition: fill 0.6s ease;
+}
+.hw-pumpkin.is-lit .hw-face {
+  fill: #ffd36b;
+  filter: drop-shadow(0 0 6px #ffb347);
+  animation: hw-candle 2.2s ease-in-out infinite;
+}
+
+.hw-flicker {
+  animation: hw-candle 3s ease-in-out infinite;
+  text-shadow: 0 0 18px rgba(240, 102, 47, 0.55);
+}
+
+.hw-card {
+  background: linear-gradient(180deg, rgba(17, 22, 32, 0.88), rgba(10, 13, 20, 0.92));
+  border: 1px solid rgba(240, 102, 47, 0.28);
+  box-shadow: 0 30px 80px -30px rgba(240, 102, 47, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: transform 0.8s var(--ease-out-soft), box-shadow 0.8s ease, border-color 0.8s ease;
+}
+.hw-card-open {
+  border-color: rgba(134, 239, 172, 0.45);
+  box-shadow: 0 0 90px -10px rgba(255, 179, 71, 0.55);
+}
+.hw-scene.is-solved .hw-card {
+  transform: perspective(900px) rotateX(6deg) scale(0.98);
+}
+
+.hw-initial {
+  transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+.hw-initial.is-glow {
+  color: var(--color-brand);
+  font-weight: 700;
+  font-style: normal;
+  text-shadow: 0 0 12px rgba(240, 102, 47, 0.8);
+}
+
+.hw-hint {
+  background: rgba(240, 102, 47, 0.08);
+  border: 1px dashed rgba(240, 102, 47, 0.3);
+}
+
+.hw-btn {
+  background: linear-gradient(135deg, #f0662f, #b8401a);
+  box-shadow: 0 10px 30px -10px rgba(240, 102, 47, 0.7);
+  transition: filter 0.2s ease, box-shadow 0.2s ease;
+}
+.hw-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 12px 36px -8px rgba(240, 102, 47, 0.85);
+}
+
+.hw-shake {
+  animation: hw-shake 0.45s ease-in-out;
+}
+
+@keyframes hw-twinkle {
+  to {
+    opacity: 0.55;
+  }
+}
+@keyframes hw-fly {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(18px, -10px) scale(0.92, 1);
+  }
+  50% {
+    transform: translate(-10px, 8px) scale(1);
+  }
+  75% {
+    transform: translate(12px, 4px) scale(0.9, 1);
+  }
+}
+@keyframes hw-drift {
+  to {
+    transform: translateX(6%);
+  }
+}
+@keyframes hw-candle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.82;
+  }
+  60% {
+    opacity: 0.95;
+  }
+  75% {
+    opacity: 0.75;
+  }
+}
+@keyframes hw-shake {
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-stars,
+  .hw-bat,
+  .hw-fog,
+  .hw-pumpkin,
+  .hw-flicker,
+  .hw-pumpkin.is-lit .hw-face {
+    animation: none !important;
+  }
 }

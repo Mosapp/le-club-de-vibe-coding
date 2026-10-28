@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui";
 import { ClubProvider, useClub } from "@/lib/store";
 import { navigate, useRoute } from "@/lib/router";
 import { PageFade } from "@/lib/motion";
+import { HalloweenGate } from "@/components/halloween-gate";
 import Landing from "@/pages/Landing";
 import Join from "@/pages/Join";
 import Login from "@/pages/Login";
@@ -203,8 +204,10 @@ function ConfirmScreen() {
 }
 
 function Shell() {
-  const { toasts, dismissToast, confirmingEmail } = useClub();
+  const { toasts, dismissToast, confirmingEmail, me } = useClub();
   const path = useRoute();
+  /* L'énigme ne bloque jamais un membre connecté ni les pages de connexion. */
+  const skipGate = !!me || path === "/login" || path === "/reset";
 
   useEffect(() => {
     document.body.style.overflow = "";
@@ -215,11 +218,13 @@ function Shell() {
       {confirmingEmail ? (
         <ConfirmScreen />
       ) : (
-        <PageFade key={path}>
-          <Suspense fallback={<PageLoader />}>
-            <Routes />
-          </Suspense>
-        </PageFade>
+        <HalloweenGate bypass={skipGate}>
+          <PageFade key={path}>
+            <Suspense fallback={<PageLoader />}>
+              <Routes />
+            </Suspense>
+          </PageFade>
+        </HalloweenGate>
       )}
       <Toaster toasts={toasts} onDismiss={dismissToast} />
     </>
