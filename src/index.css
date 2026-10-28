@@ -901,3 +901,35 @@ button:active {
     animation: none !important;
   }
 }
+
+/* Épreuve ultime (sur le site, après l'énigme) */
+.hw-ultimate-fab {
+  /* au-dessus de la barre de navigation mobile de l'espace membre */
+  bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(135deg, #f0662f, #8b2fc9);
+  box-shadow: 0 12px 34px -10px rgba(240, 102, 47, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  animation: hw-fab-glow 3s ease-in-out infinite;
+}
+@media (min-width: 1024px) {
+  .hw-ultimate-fab {
+    bottom: 1.5rem;
+  }
+}
+@keyframes hw-fab-glow {
+  50% {
+    box-shadow: 0 12px 44px -6px rgba(240, 102, 47, 1), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  }
+}
+.hw-fragment {
+  background: radial-gradient(120% 90% at 50% 0%, rgba(255, 179, 71, 0.16), rgba(10, 13, 20, 0.6) 70%);
+  border: 1px solid rgba(255, 179, 71, 0.35);
+}
+.hw-hint-box {
+  background: rgba(139, 47, 201, 0.12);
+  border: 1px dashed rgba(167, 112, 230, 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-ultimate-fab {
+    animation: none;
+  }
+}

@@ -51,3 +51,25 @@ Puis ajoute-les au workflow de build comme variables `env`.
 - Les regles RLS empechent un membre de modifier le profil d'un autre membre.
 
 Les défis, sessions et regles du club restent stockes localement dans cette version.
+
+## 6. Halloween Code Mystery (énigme d'entrée + épreuve ultime)
+
+1. Ouvre `supabase/migration-halloween.sql` et remplace `COLLE_ICI_LE_LIEN_CLAUDE_CODE`
+   (étape 6, tout en bas) par le vrai lien du trésor.
+2. Colle tout le fichier dans **SQL Editor**, puis exécute-le.
+
+Le serveur garantit alors :
+
+- un nom = une seule participation, et 5 tentatives maximum comptées côté serveur ;
+- chaque détective qui atteint 5/10 reçoit un mot de la phrase secrète (n°1 à 10, puis on recommence) ;
+- le lien du trésor n'est jamais dans le code du site : il n'est envoyé qu'à un détective qui tape la phrase complète (10 essais).
+
+Pour suivre le concours : **Table Editor > halloween_players** (`passed_at` = entrée sur le site,
+`fragment` = numéro du mot reçu, `claimed_at` = trésor trouvé). Pour changer le lien plus tard :
+
+```sql
+update public.halloween_secret set treasure_url = 'https://…' where id = 1;
+```
+
+Tant que cette migration n'est pas exécutée, le jeu fonctionne en local et l'épreuve ultime
+affiche « les fragments ne sont pas encore distribués ».

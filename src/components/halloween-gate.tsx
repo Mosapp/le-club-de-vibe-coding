@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type R
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/utils/cn";
 import { LETTERS, TRIALS, VAULT_CODE, type Answer, type Trial } from "@/components/halloween-trials";
+import { HalloweenUltimate } from "@/components/halloween-ultimate";
+import { finishAttempt, startPlayer } from "@/lib/halloween";
 
 /* ==================================================================
    🎃 HALLOWEEN CODE MYSTERY — « Le secret du code maudit »
@@ -17,8 +19,13 @@ import { LETTERS, TRIALS, VAULT_CODE, type Answer, type Trial } from "@/componen
      ne remet ni le chrono, ni les réponses, ni les tentatives à zéro.
    - En cas de réussite, la personne reçoit un récapitulatif à envoyer
      à l'organisateur, puis elle entre sur le site.
-   Attention : c'est un jeu, pas une protection (les réponses sont
-   dans le code). Les membres connectés et les liens reçus par mail
+   - Quand Supabase est en place (supabase/migration-halloween.sql),
+     le serveur a le dernier mot : un nom = une seule participation,
+     5 tentatives comptées côté serveur. Sans lui, le jeu reste local.
+   - Une fois sur le site : mot de bienvenue + fragment de la phrase
+     secrète, puis l'épreuve ultime (halloween-ultimate.tsx).
+   Attention : les réponses des 10 épreuves sont dans le code du site ;
+   seul le lien du trésor est vraiment caché (sur le serveur). Les membres connectés et les liens reçus par mail
    (confirmation, nouveau mot de passe) ne sont jamais bloqués.
 ================================================================== */
 
@@ -32,7 +39,8 @@ const PASS_SCORE = 5;
 const RULES = [
   "Chaque participant doit résoudre les épreuves dans l'ordre.",
   `Le site du club ne s'ouvre qu'aux détectives qui obtiennent au moins ${PASS_SCORE}/${TOTAL}.`,
-  `${MAX_ATTEMPTS} tentatives maximum par personne. Après ${MAX_ATTEMPTS} échecs, le coffre se scelle pour toujours.`,
+  `Une seule participation par personne, ${MAX_ATTEMPTS} tentatives maximum. Après ${MAX_ATTEMPTS} échecs, le coffre se scelle pour toujours.`,
+  "Une fois sur le site, chaque détective reçoit un fragment de la phrase secrète : l'épreuve ultime se gagne en équipe.",
   "Le gagnant sera déterminé selon les règles annoncées par l'organisateur : bonnes réponses et, en cas d'égalité, rapidité de participation.",
   "La date limite et les modalités de remise du prix seront communiquées par le club.",
 ];
@@ -51,6 +59,10 @@ type Progress = {
   vault?: string;
   finishedAt?: number;
   entered?: boolean;
+  /** le serveur refuse toute nouvelle tentative */
+  blocked?: boolean;
+  /** le mot de bienvenue de l'épreuve ultime a déjà été montré */
+  welcomed?: boolean;
 };
 
 function load(): Progress | null {
@@ -82,22 +94,37 @@ function scoreOf(p: Progress) {
 }
 
 function isSuccess(p: Progress) {
-  return !!p.finishedAt && scoreOf(p) >= PASS_SCORE;
+  return !!p.finishedAt && !p.blocked && scoreOf(p) >= PASS_SCORE;
 }
 
 /** Affiche le jeu tant que la personne n'a pas réussi, sinon le site. */
 export function HalloweenGate({ bypass = false, children }: { bypass?: boolean; children: ReactNode }) {
   const [progress, setProgress] = useState<Progress | null>(load);
-  if (bypass || (progress?.entered && isSuccess(progress))) return <>{children}</>;
-  return (
-    <MysteryScreen
-      progress={progress}
-      onChange={(p) => {
-        save(p);
-        setProgress(p);
-      }}
-    />
-  );
+  const change = (p: Progress) => {
+    save(p);
+    setProgress(p);
+  };
+  // Réponse du serveur arrivée après coup : on repart de l'état le plus récent.
+  const patch = (fn: (p: Progress) => Progress) =>
+    setProgress((prev) => {
+      if (!prev) return prev;
+      const next = fn(prev);
+      save(next);
+      return next;
+    });
+
+  const played = !!progress?.entered && isSuccess(progress);
+  if (bypass || played) {
+    return (
+      <>
+        {children}
+        {played && progress && (
+          <HalloweenUltimate name={progress.name} autoOpen={!progress.welcomed} onSeen={() => patch((p) => ({ ...p, welcomed: true }))} />
+        )}
+      </>
+    );
+  }
+  return <MysteryScreen progress={progress} onChange={change} onPatch={patch} />;
 }
 
 /* ----------------------------- Décor ----------------------------- */
@@ -149,7 +176,15 @@ function Scenery() {
 
 /* ----------------------------- Écran ----------------------------- */
 
-function MysteryScreen({ progress, onChange }: { progress: Progress | null; onChange: (p: Progress) => void }) {
+function MysteryScreen({
+  progress,
+  onChange,
+  onPatch,
+}: {
+  progress: Progress | null;
+  onChange: (p: Progress) => void;
+  onPatch: (fn: (p: Progress) => Progress) => void;
+}) {
   const topRef = useRef<HTMLDivElement>(null);
   const step = !progress ? -1 : progress.finishedAt ? TOTAL : progress.answers.length;
 
@@ -199,9 +234,21 @@ function MysteryScreen({ progress, onChange }: { progress: Progress | null; onCh
 
         {step === -1 && (
           <Intro
-            onStart={(name) => {
+            onStart={async (name) => {
+              const r = await startPlayer(name);
+              if (!r.ok && r.reason === "name_taken")
+                return "Ce nom a déjà participé au Halloween Code Mystery : une seule participation par personne.";
+              if (!r.ok && r.reason === "name_invalid") return "Ce nom n'est pas valide. Écris ton prénom et ton nom.";
+              // Serveur indisponible : on joue quand même, en local.
+              const done = r.ok ? r.data.attempts : 0;
               const now = Date.now();
-              onChange({ name, firstStartedAt: now, attempt: 1, history: [], startedAt: now, answers: [] });
+              const fresh: Progress = { name, firstStartedAt: now, attempt: Math.min(done + 1, MAX_ATTEMPTS), history: [], startedAt: now, answers: [] };
+              if (r.ok && !r.data.passed && done >= MAX_ATTEMPTS) {
+                onChange({ ...fresh, finishedAt: now, blocked: true });
+              } else {
+                onChange(fresh);
+              }
+              return null;
             }}
           />
         )}
@@ -217,7 +264,14 @@ function MysteryScreen({ progress, onChange }: { progress: Progress | null; onCh
 
         {progress && step === TRIALS.length && (
           <VaultCard
-            onSubmit={(code) => onChange({ ...progress, vault: code, finishedAt: Date.now() })}
+            onSubmit={(code) => {
+              const done: Progress = { ...progress, vault: code, finishedAt: Date.now() };
+              onChange(done);
+              // Le serveur compte la tentative ; s'il la refuse, le coffre se scelle.
+              void finishAttempt(scoreOf(done)).then((r) => {
+                if (!r.ok && r.reason === "no_attempts_left") onPatch((p) => ({ ...p, blocked: true }));
+              });
+            }}
           />
         )}
 
@@ -274,18 +328,23 @@ function Card({ children, className }: { children: ReactNode; className?: string
 
 /* ---- Intro : histoire, récompense, règles, prénom ---- */
 
-function Intro({ onStart }: { onStart: (name: string) => void }) {
+function Intro({ onStart }: { onStart: (name: string) => Promise<string | null> }) {
   const [name, setName] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     if (name.trim().length < 2) {
-      setError(true);
+      setError("Indique ton nom pour que le club puisse te retrouver.");
       return;
     }
     haptic(20);
-    onStart(name.trim());
+    setBusy(true);
+    const err = await onStart(name.trim().replace(/\s+/g, " "));
+    setBusy(false);
+    if (err) setError(err);
   };
 
   return (
@@ -328,21 +387,25 @@ function Intro({ onStart }: { onStart: (name: string) => void }) {
             value={name}
             onChange={(e) => {
               setName(e.target.value);
-              setError(false);
+              setError(null);
             }}
             maxLength={60}
             autoComplete="name"
             placeholder="Ex. : Awa Diallo"
-            aria-invalid={error}
+            aria-invalid={!!error}
             aria-describedby="hw-name-error"
             className="hw-input h-12 min-w-0 rounded-xl px-4 text-[16px] sm:flex-1"
           />
-          <button type="submit" className="hw-btn inline-flex h-12 items-center justify-center rounded-xl px-5 text-[15px] font-semibold text-white">
-            Commencer l'enquête 🔦
+          <button
+            type="submit"
+            disabled={busy}
+            className="hw-btn inline-flex h-12 items-center justify-center rounded-xl px-5 text-[15px] font-semibold text-white disabled:opacity-60"
+          >
+            {busy ? "Vérification…" : "Commencer l'enquête 🔦"}
           </button>
         </div>
         <p id="hw-name-error" role="status" aria-live="polite" className="mt-2 min-h-[1.1rem] text-[13px] text-[#fca5a5]">
-          {error && "Indique ton nom pour que le club puisse te retrouver."}
+          {error}
         </p>
         <p className="text-[12.5px] leading-relaxed text-faint">
           ⏱️ Le chrono démarre dès que tu commences. Dans une tentative, chaque réponse validée est définitive.
@@ -478,11 +541,11 @@ function VaultCard({ onSubmit }: { onSubmit: (code: string) => void }) {
 
 function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnter: () => void; onRetry: () => void }) {
   const score = scoreOf(progress);
-  const success = score >= PASS_SCORE;
+  const success = score >= PASS_SCORE && !progress.blocked;
   const left = MAX_ATTEMPTS - progress.attempt;
 
   if (!success) {
-    const sealed = left <= 0;
+    const sealed = left <= 0 || !!progress.blocked;
     return (
       <Card>
         <div className="text-center">
@@ -494,7 +557,7 @@ function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnte
           </h2>
           <p className="mx-auto mt-2 max-w-sm text-[14.5px] leading-relaxed text-muted">
             {sealed
-              ? `Tu as utilisé tes ${MAX_ATTEMPTS} tentatives. L'entité garde le site du club dans l'ombre.`
+              ? `Tes ${MAX_ATTEMPTS} tentatives sont épuisées. L'entité garde le site du club dans l'ombre.`
               : `L'entité ricane : il te faut au moins ${PASS_SCORE}/${TOTAL} pour entrer. Elle ne te dira pas quelles réponses sont fausses…`}
           </p>
         </div>
@@ -508,7 +571,7 @@ function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnte
           </div>
           <div className="hw-stat rounded-xl p-3">
             <dt className="label-mono text-faint">Tentatives restantes</dt>
-            <dd className={cn("mt-2 text-2xl font-bold", left > 0 ? "text-ink" : "text-[#fca5a5]")}>{Math.max(0, left)}</dd>
+            <dd className={cn("mt-2 text-2xl font-bold", sealed ? "text-[#fca5a5]" : "text-ink")}>{sealed ? 0 : left}</dd>
           </div>
         </dl>
 
