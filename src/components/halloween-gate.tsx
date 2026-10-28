@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/utils/cn";
-import { LETTERS, TRIALS, VAULT_CODE, type Answer, type Trial } from "@/components/halloween-trials";
+import { LETTERS, buildGame, newSeed, type Answer, type Game, type Trial } from "@/components/halloween-trials";
 import { HalloweenUltimate } from "@/components/halloween-ultimate";
 import { finishAttempt, startPlayer } from "@/lib/halloween";
 
@@ -9,6 +9,9 @@ import { finishAttempt, startPlayer } from "@/lib/halloween";
    🎃 HALLOWEEN CODE MYSTERY — « Le secret du code maudit »
    Porte d'entrée du site : 10 épreuves à résoudre dans l'ordre
    (les épreuves sont dans halloween-trials.tsx, le coffre ici).
+   - Chaque tentative tire une graine (seed) : énigmes, ordre des
+     épreuves et ordre des réponses changent d'un candidat à l'autre
+     et d'une tentative à l'autre. L'épreuve ultime ne change pas.
    - Il faut au moins PASS_SCORE/10 (5/10) pour entrer sur le site.
    - 10 tentatives maximum ; après 10 échecs, le site reste fermé.
    - Dans une tentative, une réponse validée est définitive et on ne
@@ -31,7 +34,8 @@ import { finishAttempt, startPlayer } from "@/lib/halloween";
 
 const STORAGE_KEY = "cvc/halloween-mystery/v3";
 
-const TOTAL = TRIALS.length + 1;
+/** 9 épreuves + le coffre */
+const TOTAL = buildGame().trials.length + 1;
 const MAX_ATTEMPTS = 10;
 /** score minimum (sur TOTAL) pour entrer sur le site */
 const PASS_SCORE = 5;
@@ -55,6 +59,8 @@ type Progress = {
   history: number[];
   /** début de la tentative en cours */
   startedAt: number;
+  /** graine des énigmes de la tentative en cours (absente = jeu d'origine) */
+  seed?: number;
   answers: Answer[];
   vault?: string;
   finishedAt?: number;
@@ -89,8 +95,9 @@ function formatDuration(ms: number) {
 }
 
 function scoreOf(p: Progress) {
-  const good = p.answers.filter((a, i) => TRIALS[i].isCorrect(a)).length;
-  return good + (p.vault === VAULT_CODE ? 1 : 0);
+  const game = buildGame(p.seed);
+  const good = p.answers.filter((a, i) => game.trials[i]?.isCorrect(a)).length;
+  return good + (p.vault === game.vaultCode ? 1 : 0);
 }
 
 function isSuccess(p: Progress) {
@@ -187,6 +194,7 @@ function MysteryScreen({
 }) {
   const topRef = useRef<HTMLDivElement>(null);
   const step = !progress ? -1 : progress.finishedAt ? TOTAL : progress.answers.length;
+  const game = buildGame(progress?.seed);
 
   useEffect(() => {
     document.title = "🎃 Halloween Code Mystery — Club de Vibe Coding";
@@ -242,7 +250,7 @@ function MysteryScreen({
               // Serveur indisponible : on joue quand même, en local.
               const done = r.ok ? r.data.attempts : 0;
               const now = Date.now();
-              const fresh: Progress = { name, firstStartedAt: now, attempt: Math.min(done + 1, MAX_ATTEMPTS), history: [], startedAt: now, answers: [] };
+              const fresh: Progress = { name, firstStartedAt: now, attempt: Math.min(done + 1, MAX_ATTEMPTS), history: [], startedAt: now, answers: [], seed: newSeed() };
               if (r.ok && !r.data.passed && done >= MAX_ATTEMPTS) {
                 onChange({ ...fresh, finishedAt: now, blocked: true });
               } else {
@@ -253,17 +261,18 @@ function MysteryScreen({
           />
         )}
 
-        {progress && step >= 0 && step < TRIALS.length && (
+        {progress && step >= 0 && step < game.trials.length && (
           <TrialCard
-            key={step}
+            key={`${progress.seed ?? "legacy"}-${step}`}
             index={step}
-            trial={TRIALS[step]}
+            trial={game.trials[step]}
             onAnswer={(choice) => onChange({ ...progress, answers: [...progress.answers, choice] })}
           />
         )}
 
-        {progress && step === TRIALS.length && (
+        {progress && step === game.trials.length && (
           <VaultCard
+            game={game}
             onSubmit={(code) => {
               const done: Progress = { ...progress, vault: code, finishedAt: Date.now() };
               onChange(done);
@@ -285,6 +294,7 @@ function MysteryScreen({
                 attempt: progress.attempt + 1,
                 history: [...progress.history, scoreOf(progress)],
                 startedAt: Date.now(),
+                seed: newSeed(),
                 answers: [],
                 vault: undefined,
                 finishedAt: undefined,
@@ -469,13 +479,14 @@ function TrialCard({ index, trial, onAnswer }: { index: number; trial: Trial; on
 
 /* ---- Épreuve 10 : le coffre ---- */
 
-function VaultCard({ onSubmit }: { onSubmit: (code: string) => void }) {
+function VaultCard({ game, onSubmit }: { game: Game; onSubmit: (code: string) => void }) {
+  const digits = game.vaultCode.length;
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!/^\d{4}$/.test(code)) {
+    if (code.length !== digits) {
       setError(true);
       return;
     }
@@ -494,25 +505,28 @@ function VaultCard({ onSubmit }: { onSubmit: (code: string) => void }) {
       <h2 className="mt-2 text-[clamp(1.25rem,5vw,1.55rem)] font-bold leading-tight text-ink">Le coffre maudit</h2>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-2">
         Tu as terminé les neuf premières épreuves. Tu dois maintenant entrer le code final. Pour le former, récupère les
-        chiffres associés aux <b className="text-ink">bonnes réponses des épreuves 1 à 4</b> :
+        chiffres associés aux <b className="text-ink">bonnes réponses des épreuves à choix multiples</b> :
       </p>
       <ul className="mt-3 space-y-1.5 text-[14px] leading-relaxed text-muted">
-        <li>• Épreuve 1 : position de la bonne réponse parmi A, B, C, D.</li>
-        <li>• Épreuve 2 : position de la bonne réponse parmi A, B, C, D.</li>
-        <li>• Épreuve 3 : position de la bonne réponse parmi A, B, C.</li>
-        <li>• Épreuve 4 : position de la bonne réponse parmi A, B, C, D.</li>
+        {game.vaultSources.map((src) => (
+          <li key={src.step}>
+            • Épreuve {src.step} ({src.title}) : position de la bonne réponse parmi {LETTERS.slice(0, src.choices).join(", ")}.
+          </li>
+        ))}
       </ul>
-      <p className="mt-3 text-[13.5px] text-faint">Exemple : A = 1, B = 2, C = 3, D = 4. Entre les quatre chiffres dans l'ordre.</p>
+      <p className="mt-3 text-[13.5px] text-faint">
+        Exemple : A = 1, B = 2, C = 3, D = 4. Entre les {digits} chiffres dans l'ordre des épreuves.
+      </p>
 
       <form onSubmit={submit} className="mt-5" noValidate>
         <label htmlFor="hw-vault" className="sr-only">
-          Code du coffre (4 chiffres)
+          Code du coffre ({digits} chiffres)
         </label>
         <input
           id="hw-vault"
           value={code}
           onChange={(e) => {
-            setCode(e.target.value.replace(/\D/g, "").slice(0, 4));
+            setCode(e.target.value.replace(/\D/g, "").slice(0, digits));
             setError(false);
           }}
           inputMode="numeric"
@@ -523,7 +537,7 @@ function VaultCard({ onSubmit }: { onSubmit: (code: string) => void }) {
           className="hw-input hw-vault h-16 w-full rounded-xl text-center font-mono text-[28px] tracking-[0.6em]"
         />
         <p id="hw-vault-error" role="status" aria-live="polite" className="mt-2 min-h-[1.1rem] text-[13px] text-[#fca5a5]">
-          {error && "Le coffre attend exactement 4 chiffres."}
+          {error && `Le coffre attend exactement ${digits} chiffres.`}
         </p>
         <button
           type="submit"
