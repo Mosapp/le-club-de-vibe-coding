@@ -7,10 +7,12 @@ import { LETTERS, TRIALS, VAULT_CODE, type Answer, type Trial } from "@/componen
    🎃 HALLOWEEN CODE MYSTERY — « Le secret du code maudit »
    Porte d'entrée du site : 10 épreuves à résoudre dans l'ordre
    (les épreuves sont dans halloween-trials.tsx, le coffre ici).
-   - Il faut réussir les 10 épreuves (10/10) pour entrer sur le site.
+   - Il faut au moins PASS_SCORE/10 (5/10) pour entrer sur le site.
    - 5 tentatives maximum ; après 5 échecs, le site reste fermé.
    - Dans une tentative, une réponse validée est définitive et on ne
      dit pas quelles réponses sont fausses (seulement le score).
+   - Dès qu'une tentative atteint le seuil, la personne entre : pas de
+     nouvelle tentative pour améliorer son score.
    - La progression est gardée dans le navigateur : recharger la page
      ne remet ni le chrono, ni les réponses, ni les tentatives à zéro.
    - En cas de réussite, la personne reçoit un récapitulatif à envoyer
@@ -24,10 +26,12 @@ const STORAGE_KEY = "cvc/halloween-mystery/v3";
 
 const TOTAL = TRIALS.length + 1;
 const MAX_ATTEMPTS = 5;
+/** score minimum (sur TOTAL) pour entrer sur le site */
+const PASS_SCORE = 5;
 
 const RULES = [
   "Chaque participant doit résoudre les épreuves dans l'ordre.",
-  "Le site du club ne s'ouvre qu'aux détectives qui réussissent les 10 épreuves.",
+  `Le site du club ne s'ouvre qu'aux détectives qui obtiennent au moins ${PASS_SCORE}/${TOTAL}.`,
   `${MAX_ATTEMPTS} tentatives maximum par personne. Après ${MAX_ATTEMPTS} échecs, le coffre se scelle pour toujours.`,
   "Le gagnant sera déterminé selon les règles annoncées par l'organisateur : bonnes réponses et, en cas d'égalité, rapidité de participation.",
   "La date limite et les modalités de remise du prix seront communiquées par le club.",
@@ -78,7 +82,7 @@ function scoreOf(p: Progress) {
 }
 
 function isSuccess(p: Progress) {
-  return !!p.finishedAt && scoreOf(p) === TOTAL;
+  return !!p.finishedAt && scoreOf(p) >= PASS_SCORE;
 }
 
 /** Affiche le jeu tant que la personne n'a pas réussi, sinon le site. */
@@ -290,7 +294,11 @@ function Intro({ onStart }: { onStart: (name: string) => void }) {
         Une mystérieuse entité a piraté le site du club et enfermé une récompense dans un{" "}
         <b className="text-ink">coffre numérique</b>. Pour la récupérer, tu dois réussir{" "}
         <b className="text-ink">dix épreuves</b> (logique, code, électronique et Arduino), découvrir les indices cachés et déverrouiller le coffre.
-        Le site ne s'ouvre qu'à ceux qui réussissent tout, et tu n'as que <b className="text-ink">{MAX_ATTEMPTS} tentatives</b>.
+        Le site ne s'ouvre qu'à partir de{" "}
+        <b className="text-ink">
+          {PASS_SCORE}/{TOTAL}
+        </b>
+        , et tu n'as que <b className="text-ink">{MAX_ATTEMPTS} tentatives</b>.
       </p>
 
       <div className="hw-reward mt-5 flex items-start gap-3 rounded-xl p-4">
@@ -470,7 +478,7 @@ function VaultCard({ onSubmit }: { onSubmit: (code: string) => void }) {
 
 function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnter: () => void; onRetry: () => void }) {
   const score = scoreOf(progress);
-  const success = score === TOTAL;
+  const success = score >= PASS_SCORE;
   const left = MAX_ATTEMPTS - progress.attempt;
 
   if (!success) {
@@ -487,7 +495,7 @@ function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnte
           <p className="mx-auto mt-2 max-w-sm text-[14.5px] leading-relaxed text-muted">
             {sealed
               ? `Tu as utilisé tes ${MAX_ATTEMPTS} tentatives. L'entité garde le site du club dans l'ombre.`
-              : "L'entité ricane : au moins une de tes réponses est fausse. Mais elle ne te dira pas laquelle…"}
+              : `L'entité ricane : il te faut au moins ${PASS_SCORE}/${TOTAL} pour entrer. Elle ne te dira pas quelles réponses sont fausses…`}
           </p>
         </div>
 
@@ -535,6 +543,8 @@ function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnte
 
 function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () => void }) {
   const [copied, setCopied] = useState(false);
+  const score = scoreOf(progress);
+  const perfect = score === TOTAL;
   const end = progress.finishedAt ?? Date.now();
   const duration = formatDuration(end - progress.startedAt);
   const total = formatDuration(end - progress.firstStartedAt);
@@ -543,7 +553,7 @@ function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () =>
   const summary = [
     "🎃 Halloween Code Mystery — Club de Vibe Coding du LPELIA",
     `Détective : ${progress.name}`,
-    `Réussi : ${TOTAL}/${TOTAL} à la tentative ${progress.attempt}/${MAX_ATTEMPTS}`,
+    `Score : ${score}/${TOTAL} à la tentative ${progress.attempt}/${MAX_ATTEMPTS}`,
     ...(progress.history.length ? [`Scores des tentatives ratées : ${progress.history.map((h) => `${h}/${TOTAL}`).join(", ")}`] : []),
     "Réponses :",
     ...progress.answers.map((a, i) => `  É${i + 1} ${TRIALS[i].title} : ${TRIALS[i].show(a)}`),
@@ -567,19 +577,26 @@ function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () =>
     <Card className="hw-card-open">
       <div className="text-center">
         <span className="text-5xl" aria-hidden="true">
-          🏆
+          {perfect ? "🏆" : "🎃"}
         </span>
-        <h2 className="mt-3 text-[clamp(1.35rem,5.5vw,1.75rem)] font-bold leading-tight text-ink">Le coffre s'ouvre !</h2>
+        <h2 className="mt-3 text-[clamp(1.35rem,5.5vw,1.75rem)] font-bold leading-tight text-ink">
+          {perfect ? "Le coffre s'ouvre !" : "La porte du club s'entrouvre !"}
+        </h2>
         <p className="mx-auto mt-2 max-w-sm text-[14.5px] leading-relaxed text-muted">
-          Bravo détective, tu as brisé le code maudit. Envoie vite ta participation au club, puis entre sur le site !
+          {perfect
+            ? "Bravo détective, tu as brisé le code maudit. Envoie vite ta participation au club, puis entre sur le site !"
+            : `Tu as obtenu au moins ${PASS_SCORE}/${TOTAL} : le site du club t'est ouvert. Envoie ta participation au club, puis entre !`}
         </p>
       </div>
 
       <dl className="mt-5 grid grid-cols-2 gap-2.5 text-center">
         <div className="hw-stat rounded-xl p-3">
-          <dt className="label-mono text-faint">Tentative</dt>
+          <dt className="label-mono text-faint">Score</dt>
           <dd className="mt-2 text-2xl font-bold text-ink">
-            {progress.attempt}/{MAX_ATTEMPTS}
+            {score}/{TOTAL}
+          </dd>
+          <dd className="mt-1 text-[12px] text-faint">
+            tentative {progress.attempt}/{MAX_ATTEMPTS}
           </dd>
         </div>
         <div className="hw-stat rounded-xl p-3">
