@@ -14,7 +14,23 @@ import { cn } from "@/utils/cn";
 
 type Load = { status: "loading" } | { status: "ready"; state: HalloweenServerState } | { status: "offline" };
 
-export function HalloweenUltimate({ name, autoOpen, onSeen }: { name: string; autoOpen: boolean; onSeen: () => void }) {
+type KnownWord = { word: string; fragment: number; total: number };
+
+export function HalloweenUltimate({
+  name,
+  recap,
+  knownWord,
+  autoOpen,
+  onSeen,
+}: {
+  name: string;
+  /** récapitulatif du jeu d'entrée, sans le mot (ajouté ici) */
+  recap: string;
+  /** mot déjà reçu à la fin du jeu, si le serveur ne répond pas tout de suite */
+  knownWord?: KnownWord;
+  autoOpen: boolean;
+  onSeen: () => void;
+}) {
   const [open, setOpen] = useState(autoOpen);
 
   useEffect(() => {
@@ -32,18 +48,19 @@ export function HalloweenUltimate({ name, autoOpen, onSeen }: { name: string; au
         <span aria-hidden="true">🎃</span>
         <span className="hidden sm:inline">Épreuve ultime</span>
       </button>
-      {open && <UltimateDialog name={name} onClose={() => setOpen(false)} />}
+      {open && <UltimateDialog name={name} recap={recap} knownWord={knownWord} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function UltimateDialog({ name, onClose }: { name: string; onClose: () => void }) {
+function UltimateDialog({ name, recap, knownWord, onClose }: { name: string; recap: string; knownWord?: KnownWord; onClose: () => void }) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [phrase, setPhrase] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [treasure, setTreasure] = useState<{ url: string | null } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [recapCopied, setRecapCopied] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -72,6 +89,11 @@ function UltimateDialog({ name, onClose }: { name: string; onClose: () => void }
   // Ponctuation ignorée : « maudit ! » compte pour un seul mot.
   const words = phrase.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
   const state = load.status === "ready" ? load.state : null;
+  const frag: KnownWord | undefined =
+    state?.word && state.fragment ? { word: state.word, fragment: state.fragment, total: state.total } : knownWord;
+  const fullRecap = frag
+    ? `${recap}\n\n🔑 Mon indice : mot n°${frag.fragment} sur ${frag.total} de la phrase secrète → « ${frag.word} »`
+    : recap;
   const triesLeft = state?.claim_tries_left ?? 0;
 
   const submit = async (e: FormEvent) => {
@@ -140,26 +162,26 @@ function UltimateDialog({ name, onClose }: { name: string; onClose: () => void }
         {/* L'indice : le fragment */}
         <div className="hw-fragment mt-5 rounded-2xl p-4 text-center sm:p-5">
           <p className="label-mono text-faint">Ton fragment de la phrase</p>
-          {load.status === "loading" && <p className="mt-4 text-[14px] text-muted">L'entité te le murmure…</p>}
-          {load.status === "offline" && (
+          {load.status === "loading" && !frag && <p className="mt-4 text-[14px] text-muted">L'entité te le murmure…</p>}
+          {load.status === "offline" && !frag && (
             <p className="mt-4 text-[14px] leading-relaxed text-muted">
               Les fragments ne sont pas encore distribués. Reviens un peu plus tard, détective.
             </p>
           )}
-          {state && state.word && state.fragment && (
+          {frag && (
             <>
               <p className="mt-3 text-[13px] text-muted">
-                Mot n°<b className="text-ink">{state.fragment}</b> sur {state.total}
+                Mot n°<b className="text-ink">{frag.fragment}</b> sur {frag.total}
               </p>
-              <p className="hw-code mt-2 break-words text-[clamp(1.8rem,9vw,2.6rem)] font-bold">« {state.word} »</p>
+              <p className="hw-code mt-2 break-words text-[clamp(1.8rem,9vw,2.6rem)] font-bold">« {frag.word} »</p>
               <div className="mt-4 flex justify-center gap-1.5" aria-hidden="true">
-                {Array.from({ length: state.total }, (_, i) => (
-                  <span key={i} className={cn("h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5", i + 1 === state.fragment ? "bg-brand" : "bg-line")} />
+                {Array.from({ length: frag.total }, (_, i) => (
+                  <span key={i} className={cn("h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5", i + 1 === frag.fragment ? "bg-brand" : "bg-line")} />
                 ))}
               </div>
             </>
           )}
-          {state && !state.word && <p className="mt-4 text-[14px] text-muted">Ton fragment n'est pas encore prêt. Reviens plus tard.</p>}
+          {state && !frag && <p className="mt-4 text-[14px] text-muted">Ton fragment n'est pas encore prêt. Reviens plus tard.</p>}
         </div>
 
         <div className="hw-hint-box mt-5 rounded-2xl p-4 text-[14.5px] leading-relaxed">
@@ -169,6 +191,40 @@ function UltimateDialog({ name, onClose }: { name: string; onClose: () => void }
             de leur numéro… <b className="text-ink">Seul, tu n'iras nulle part. Ensemble, vous briserez le sort.</b>
           </p>
         </div>
+
+        {/* Le récapitulatif à envoyer au club (avec le mot) */}
+        <details className="hw-rules mt-5 rounded-2xl border border-line p-4" open={!state?.claimed}>
+          <summary className="cursor-pointer select-none text-[14.5px] font-semibold text-ink">📤 Ton récapitulatif à envoyer au club</summary>
+          <pre className="hw-pre mt-3 whitespace-pre-wrap break-words rounded-xl p-3.5 text-[12.5px] leading-relaxed">{fullRecap}</pre>
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(fullRecap)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hw-btn inline-flex h-11 items-center justify-center rounded-xl px-4 text-[14px] font-semibold text-white"
+            >
+              Envoyer sur WhatsApp
+            </a>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(fullRecap);
+                  setRecapCopied(true);
+                  window.setTimeout(() => setRecapCopied(false), 2000);
+                } catch {
+                  /* le texte reste affiché */
+                }
+              }}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-4 text-[14px] font-semibold text-ink-2 hover:border-brand"
+            >
+              {recapCopied ? "Copié ✓" : "Copier le récapitulatif"}
+            </button>
+          </div>
+          <p className="mt-2.5 text-center text-[12px] leading-relaxed text-faint">
+            C'est ce récapitulatif qui fait foi pour le classement.
+          </p>
+        </details>
 
         {/* La phrase */}
         {treasure ? (

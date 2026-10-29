@@ -130,7 +130,13 @@ export function HalloweenGate({ bypass = false, children }: { bypass?: boolean; 
       <>
         {children}
         {played && progress && (
-          <HalloweenUltimate name={progress.name} autoOpen={!progress.welcomed} onSeen={() => patch((p) => ({ ...p, welcomed: true }))} />
+          <HalloweenUltimate
+            name={progress.name}
+            recap={recapOf(progress)}
+            knownWord={progress.word && progress.fragment ? { word: progress.word, fragment: progress.fragment, total: progress.fragmentTotal ?? 10 } : undefined}
+            autoOpen={!progress.welcomed}
+            onSeen={() => patch((p) => ({ ...p, welcomed: true }))}
+          />
         )}
       </>
     );
@@ -293,7 +299,6 @@ function MysteryScreen({
         {progress && step === TOTAL && (
           <ResultCard
             progress={progress}
-            onPatch={onPatch}
             onEnter={() => onChange({ ...progress, entered: true })}
             onRetry={() =>
               onChange({
@@ -560,17 +565,7 @@ function VaultCard({ game, onSubmit }: { game: Game; onSubmit: (code: string) =>
 
 /* ---- Résultat : réussite (récapitulatif + entrée), échec (nouvelle tentative) ou coffre scellé ---- */
 
-function ResultCard({
-  progress,
-  onPatch,
-  onEnter,
-  onRetry,
-}: {
-  progress: Progress;
-  onPatch: (fn: (p: Progress) => Progress) => void;
-  onEnter: () => void;
-  onRetry: () => void;
-}) {
+function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnter: () => void; onRetry: () => void }) {
   const score = scoreOf(progress);
   const success = score >= PASS_SCORE && !progress.blocked;
   const left = MAX_ATTEMPTS - progress.attempt;
@@ -632,70 +627,30 @@ function ResultCard({
     );
   }
 
-  return <SuccessCard progress={progress} onPatch={onPatch} onEnter={onEnter} />;
+  return <SuccessCard progress={progress} onEnter={onEnter} />;
 }
 
-function SuccessCard({
-  progress,
-  onPatch,
-  onEnter,
-}: {
-  progress: Progress;
-  onPatch: (fn: (p: Progress) => Progress) => void;
-  onEnter: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const [noFragment, setNoFragment] = useState(false);
-
-  // L'indice arrive avec la réponse du serveur ; s'il manque (réseau lent, page rechargée), on le redemande.
-  useEffect(() => {
-    if (progress.word) return;
-    let alive = true;
-    const t = window.setTimeout(() => {
-      void startPlayer(progress.name).then((r) => {
-        if (!alive) return;
-        if (r.ok && r.data.word && r.data.fragment) {
-          onPatch((p) => ({ ...p, fragment: r.data.fragment!, fragmentTotal: r.data.total, word: r.data.word! }));
-        } else {
-          setNoFragment(true);
-        }
-      });
-    }, 1200);
-    return () => {
-      alive = false;
-      window.clearTimeout(t);
-    };
-  }, [progress.word, progress.name]); // onPatch est stable : inutile de relancer pour lui
-
+/** Récapitulatif à partager (sans le mot : il est ajouté dans la fenêtre de bienvenue). */
+function recapOf(progress: Progress) {
   const score = scoreOf(progress);
-  const perfect = score === TOTAL;
   const end = progress.finishedAt ?? Date.now();
-  const duration = formatDuration(end - progress.startedAt);
-  const total = formatDuration(end - progress.firstStartedAt);
   const date = new Date(end).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "medium" });
-
-  const summary = [
+  return [
     "🎃 Halloween Code Mystery — Club de Vibe Coding du LPELIA",
     `Détective : ${progress.name}`,
     `Score : ${score}/${TOTAL} à la tentative ${progress.attempt}/${MAX_ATTEMPTS}`,
     ...(progress.history.length ? [`Scores des tentatives ratées : ${progress.history.map((h) => `${h}/${TOTAL}`).join(", ")}`] : []),
-    `Temps de la tentative : ${duration}`,
-    `Temps total depuis le début : ${total}`,
+    `Temps de la tentative : ${formatDuration(end - progress.startedAt)}`,
+    `Temps total depuis le début : ${formatDuration(end - progress.firstStartedAt)}`,
     `Terminé le : ${date}`,
-    ...(progress.word
-      ? ["", `🔑 Mon indice : mot n°${progress.fragment} sur ${progress.fragmentTotal ?? 10} de la phrase secrète → « ${progress.word} »`]
-      : []),
   ].join("\n");
+}
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(summary);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* presse-papiers indisponible : le texte reste visible à l'écran */
-    }
-  };
+/* Réussite : le score, puis « Accéder au site ». Le mot indice est révélé au clic, dans la fenêtre de bienvenue. */
+function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () => void }) {
+  const score = scoreOf(progress);
+  const perfect = score === TOTAL;
+  const total = formatDuration((progress.finishedAt ?? Date.now()) - progress.firstStartedAt);
 
   return (
     <Card className="hw-card-open">
@@ -708,8 +663,8 @@ function SuccessCard({
         </h2>
         <p className="mx-auto mt-2 max-w-sm text-[14.5px] leading-relaxed text-muted">
           {perfect
-            ? "Bravo détective, tu as brisé le code maudit. Envoie vite ta participation au club, puis entre sur le site !"
-            : `Tu as obtenu au moins ${PASS_SCORE}/${TOTAL} : le site du club t'est ouvert. Envoie ta participation au club, puis entre !`}
+            ? "Bravo détective, tu as brisé le code maudit : le site du club t'est ouvert."
+            : `Tu as obtenu au moins ${PASS_SCORE}/${TOTAL} : le site du club t'est ouvert.`}
         </p>
       </div>
 
@@ -729,51 +684,22 @@ function SuccessCard({
         </div>
       </dl>
 
-      <div className="hw-fragment mt-4 rounded-2xl p-4 text-center">
-        <p className="label-mono text-faint">🔑 Ton indice pour l'épreuve ultime</p>
-        {progress.word ? (
-          <>
-            <p className="mt-2 text-[13px] text-muted">
-              Mot n°<b className="text-ink">{progress.fragment}</b> sur {progress.fragmentTotal ?? 10} de la phrase secrète
-            </p>
-            <p className="hw-code mt-1 break-words text-[clamp(1.5rem,7vw,2.1rem)] font-bold">« {progress.word} »</p>
-          </>
-        ) : (
-          <p className="mt-2 text-[13.5px] text-muted">
-            {noFragment ? "Ton indice t'attend sur le site, dans l'épreuve ultime." : "L'entité te murmure ton indice…"}
-          </p>
-        )}
+      <div className="hw-fragment mt-5 rounded-2xl p-4 text-center">
+        <p className="text-[14.5px] leading-relaxed text-ink-2">
+          🔑 De l'autre côté de la porte, <b className="text-ink">ton mot de la phrase secrète</b> t'attend… ainsi que ton récapitulatif à
+          envoyer au club.
+        </p>
       </div>
-
-      <pre className="hw-pre mt-4 whitespace-pre-wrap break-words rounded-xl p-4 text-[12.5px] leading-relaxed">{summary}</pre>
-
-      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-        <a
-          href={`https://wa.me/?text=${encodeURIComponent(summary)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hw-btn inline-flex h-12 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold text-white"
-        >
-          Envoyer sur WhatsApp
-        </a>
-        <button
-          type="button"
-          onClick={copy}
-          className="inline-flex h-12 items-center justify-center rounded-xl border border-line px-4 text-[14.5px] font-semibold text-ink-2 transition-colors hover:border-brand hover:text-brand-ink"
-        >
-          {copied ? "Copié ✓" : "Copier le récapitulatif"}
-        </button>
-      </div>
-      <p className="mt-3 text-center text-[12.5px] leading-relaxed text-faint">
-        Envoie ce récapitulatif à l'organisateur du club : c'est lui qui fait foi pour le classement.
-      </p>
 
       <button
         type="button"
-        onClick={onEnter}
-        className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-xl border border-brand/50 px-5 text-[15px] font-semibold text-brand-ink transition-colors hover:bg-brand-soft"
+        onClick={() => {
+          haptic(30);
+          onEnter();
+        }}
+        className="hw-btn mt-5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl px-5 text-[16px] font-bold text-white"
       >
-        Entrer sur le site du club →
+        Accéder au site 🎃
       </button>
     </Card>
   );
