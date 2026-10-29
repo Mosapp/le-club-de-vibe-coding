@@ -69,6 +69,10 @@ type Progress = {
   blocked?: boolean;
   /** le mot de bienvenue de l'épreuve ultime a déjà été montré */
   welcomed?: boolean;
+  /** indice reçu du serveur : mot n°fragment (sur fragmentTotal) de la phrase secrète */
+  fragment?: number;
+  fragmentTotal?: number;
+  word?: string;
 };
 
 function load(): Progress | null {
@@ -279,6 +283,8 @@ function MysteryScreen({
               // Le serveur compte la tentative ; s'il la refuse, le coffre se scelle.
               void finishAttempt(scoreOf(done)).then((r) => {
                 if (!r.ok && r.reason === "no_attempts_left") onPatch((p) => ({ ...p, blocked: true }));
+                if (r.ok && r.data.word && r.data.fragment)
+                  onPatch((p) => ({ ...p, fragment: r.data.fragment!, fragmentTotal: r.data.total, word: r.data.word! }));
               });
             }}
           />
@@ -287,6 +293,7 @@ function MysteryScreen({
         {progress && step === TOTAL && (
           <ResultCard
             progress={progress}
+            onPatch={onPatch}
             onEnter={() => onChange({ ...progress, entered: true })}
             onRetry={() =>
               onChange({
@@ -553,7 +560,17 @@ function VaultCard({ game, onSubmit }: { game: Game; onSubmit: (code: string) =>
 
 /* ---- Résultat : réussite (récapitulatif + entrée), échec (nouvelle tentative) ou coffre scellé ---- */
 
-function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnter: () => void; onRetry: () => void }) {
+function ResultCard({
+  progress,
+  onPatch,
+  onEnter,
+  onRetry,
+}: {
+  progress: Progress;
+  onPatch: (fn: (p: Progress) => Progress) => void;
+  onEnter: () => void;
+  onRetry: () => void;
+}) {
   const score = scoreOf(progress);
   const success = score >= PASS_SCORE && !progress.blocked;
   const left = MAX_ATTEMPTS - progress.attempt;
@@ -615,11 +632,41 @@ function ResultCard({ progress, onEnter, onRetry }: { progress: Progress; onEnte
     );
   }
 
-  return <SuccessCard progress={progress} onEnter={onEnter} />;
+  return <SuccessCard progress={progress} onPatch={onPatch} onEnter={onEnter} />;
 }
 
-function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () => void }) {
+function SuccessCard({
+  progress,
+  onPatch,
+  onEnter,
+}: {
+  progress: Progress;
+  onPatch: (fn: (p: Progress) => Progress) => void;
+  onEnter: () => void;
+}) {
   const [copied, setCopied] = useState(false);
+  const [noFragment, setNoFragment] = useState(false);
+
+  // L'indice arrive avec la réponse du serveur ; s'il manque (réseau lent, page rechargée), on le redemande.
+  useEffect(() => {
+    if (progress.word) return;
+    let alive = true;
+    const t = window.setTimeout(() => {
+      void startPlayer(progress.name).then((r) => {
+        if (!alive) return;
+        if (r.ok && r.data.word && r.data.fragment) {
+          onPatch((p) => ({ ...p, fragment: r.data.fragment!, fragmentTotal: r.data.total, word: r.data.word! }));
+        } else {
+          setNoFragment(true);
+        }
+      });
+    }, 1200);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [progress.word, progress.name]); // onPatch est stable : inutile de relancer pour lui
+
   const score = scoreOf(progress);
   const perfect = score === TOTAL;
   const end = progress.finishedAt ?? Date.now();
@@ -635,6 +682,9 @@ function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () =>
     `Temps de la tentative : ${duration}`,
     `Temps total depuis le début : ${total}`,
     `Terminé le : ${date}`,
+    ...(progress.word
+      ? ["", `🔑 Mon indice : mot n°${progress.fragment} sur ${progress.fragmentTotal ?? 10} de la phrase secrète → « ${progress.word} »`]
+      : []),
   ].join("\n");
 
   const copy = async () => {
@@ -678,6 +728,22 @@ function SuccessCard({ progress, onEnter }: { progress: Progress; onEnter: () =>
           <dd className="mt-2 text-2xl font-bold text-ink">{total}</dd>
         </div>
       </dl>
+
+      <div className="hw-fragment mt-4 rounded-2xl p-4 text-center">
+        <p className="label-mono text-faint">🔑 Ton indice pour l'épreuve ultime</p>
+        {progress.word ? (
+          <>
+            <p className="mt-2 text-[13px] text-muted">
+              Mot n°<b className="text-ink">{progress.fragment}</b> sur {progress.fragmentTotal ?? 10} de la phrase secrète
+            </p>
+            <p className="hw-code mt-1 break-words text-[clamp(1.5rem,7vw,2.1rem)] font-bold">« {progress.word} »</p>
+          </>
+        ) : (
+          <p className="mt-2 text-[13.5px] text-muted">
+            {noFragment ? "Ton indice t'attend sur le site, dans l'épreuve ultime." : "L'entité te murmure ton indice…"}
+          </p>
+        )}
+      </div>
 
       <pre className="hw-pre mt-4 whitespace-pre-wrap break-words rounded-xl p-4 text-[12.5px] leading-relaxed">{summary}</pre>
 
