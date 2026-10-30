@@ -933,3 +933,286 @@ button:active {
     animation: none;
   }
 }
+
+
+/* ==================================================================
+   FÊTES DE FIN D'ANNÉE (neige, Père Noël 3D, page #/fetes)
+================================================================== */
+
+.xm-scene {
+  background:
+    radial-gradient(70% 45% at 50% 0%, rgba(40, 110, 200, 0.35), transparent 70%),
+    radial-gradient(60% 40% at 15% 100%, rgba(200, 30, 60, 0.22), transparent 70%),
+    radial-gradient(60% 40% at 85% 100%, rgba(30, 140, 90, 0.2), transparent 70%),
+    #050b14;
+}
+.xm-scene .hw-btn,
+.xm-fab {
+  background: linear-gradient(135deg, #e0324b, #a3122b);
+  box-shadow: 0 10px 30px -10px rgba(224, 50, 75, 0.75);
+}
+.xm-fab {
+  bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  animation: xm-glow 3s ease-in-out infinite;
+}
+@media (min-width: 1024px) {
+  .xm-fab {
+    bottom: 1.5rem;
+  }
+}
+.xm-scene .hw-card {
+  border-color: rgba(255, 211, 107, 0.28);
+  box-shadow: 0 30px 80px -30px rgba(40, 110, 200, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.xm-gold {
+  color: #ffd36b;
+  text-shadow: 0 0 16px rgba(255, 211, 107, 0.45);
+}
+.xm-preview {
+  background: rgba(124, 196, 255, 0.1);
+  border: 1px dashed rgba(124, 196, 255, 0.45);
+  color: #cfe3f1;
+}
+.xm-tabs {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-line);
+}
+.xm-tab-on {
+  background: linear-gradient(135deg, rgba(224, 50, 75, 0.9), rgba(163, 18, 43, 0.9));
+  color: #fff;
+}
+.xm-tile {
+  border: 1px solid var(--color-line);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.xm-tile.is-open {
+  background: linear-gradient(160deg, rgba(224, 50, 75, 0.35), rgba(30, 140, 90, 0.25));
+  border-color: rgba(255, 211, 107, 0.55);
+  color: #fff;
+  animation: xm-glow 2.6s ease-in-out infinite;
+}
+.xm-tile.is-open:hover {
+  transform: translateY(-2px);
+}
+.xm-tile.is-good {
+  background: rgba(134, 239, 172, 0.12);
+  border-color: rgba(134, 239, 172, 0.45);
+  color: #bbf7d0;
+}
+.xm-tile.is-bad {
+  background: rgba(124, 196, 255, 0.08);
+  color: var(--color-muted);
+}
+.xm-tile.is-locked {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--color-faint);
+}
+.xm-good {
+  background: rgba(134, 239, 172, 0.12);
+  border: 1px solid rgba(134, 239, 172, 0.4);
+  color: #bbf7d0;
+}
+.xm-bad {
+  background: rgba(124, 196, 255, 0.1);
+  border: 1px solid rgba(124, 196, 255, 0.35);
+  color: #cfe3f1;
+}
+.xm-row {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-line);
+}
+.xm-row.is-me {
+  border-color: rgba(255, 211, 107, 0.6);
+  background: rgba(255, 211, 107, 0.08);
+}
+.xm-countdown {
+  background: radial-gradient(120% 100% at 50% 0%, rgba(255, 211, 107, 0.14), rgba(10, 13, 20, 0.6) 70%);
+  border: 1px solid rgba(255, 211, 107, 0.35);
+}
+.xm-count-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-line);
+}
+.xm-santa-bubble {
+  bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  width: 104px;
+  height: 128px;
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.16), rgba(5, 11, 20, 0.55) 70%);
+  border: 1px solid rgba(255, 211, 107, 0.35);
+  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+@media (min-width: 1024px) {
+  .xm-santa-bubble {
+    bottom: 1.5rem;
+    width: 140px;
+    height: 170px;
+  }
+}
+.xm-santa-stage {
+  background: radial-gradient(90% 70% at 50% 35%, #1d3b66, #07101c 75%);
+  border: 1px solid rgba(255, 211, 107, 0.35);
+}
+@keyframes xm-glow {
+  50% {
+    box-shadow: 0 0 26px -4px rgba(255, 211, 107, 0.55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xm-fab,
+  .xm-tile.is-open {
+    animation: none;
+  }
+}
+
+/* Père Noël dessiné (SVG animé) et traîneau */
+.xm-santa-2d {
+  bottom: calc(5.6rem + env(safe-area-inset-bottom, 0px));
+  width: 92px;
+  height: 122px;
+}
+@media (min-width: 1024px) {
+  .xm-santa-2d {
+    bottom: 1rem;
+    width: 120px;
+    height: 160px;
+  }
+}
+.xm-speech {
+  background: #fffaf2;
+  color: #2b1d14;
+  box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.6);
+}
+.xm-speech::after {
+  content: "";
+  position: absolute;
+  left: 34px;
+  bottom: -7px;
+  border: 8px solid transparent;
+  border-top-color: #fffaf2;
+  border-bottom: 0;
+}
+.xm-santa-wave {
+  transform-origin: 118px 114px;
+  animation: xm-wave 1.6s ease-in-out infinite;
+}
+.xm-santa-body {
+  transform-origin: 80px 200px;
+  animation: xm-breathe 3.2s ease-in-out infinite;
+}
+.xm-santa-head {
+  transform-origin: 80px 110px;
+  animation: xm-nod 4s ease-in-out infinite;
+}
+.xm-santa-eyes {
+  transform-origin: 80px 70px;
+  animation: xm-blink 4.6s infinite;
+}
+.xm-santa-pompom {
+  transform-origin: 108px 18px;
+  animation: xm-swing 2.4s ease-in-out infinite;
+}
+.xm-sleigh-track {
+  height: 70px;
+}
+.xm-sleigh {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateX(110vw);
+  animation: xm-fly 45s linear infinite;
+  animation-delay: 4s;
+  filter: drop-shadow(0 0 10px rgba(255, 211, 107, 0.35));
+}
+.xm-sleigh-bob {
+  animation: xm-bob 1.8s ease-in-out infinite;
+}
+.xm-deer-a {
+  animation: xm-gallop 0.5s ease-in-out infinite;
+}
+.xm-deer-b {
+  animation: xm-gallop 0.5s ease-in-out infinite reverse;
+}
+@keyframes xm-wave {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+@keyframes xm-breathe {
+  50% {
+    transform: scale(1.025, 0.985);
+  }
+}
+@keyframes xm-nod {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-3deg);
+  }
+  60% {
+    transform: rotate(2deg);
+  }
+}
+@keyframes xm-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes xm-swing {
+  0%,
+  100% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(14deg);
+  }
+}
+@keyframes xm-fly {
+  0% {
+    transform: translateX(110vw);
+  }
+  32% {
+    transform: translateX(-340px);
+  }
+  100% {
+    transform: translateX(-340px);
+  }
+}
+@keyframes xm-bob {
+  50% {
+    transform: translateY(8px) rotate(-2deg);
+  }
+}
+@keyframes xm-gallop {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xm-santa-wave,
+  .xm-santa-body,
+  .xm-santa-head,
+  .xm-santa-eyes,
+  .xm-santa-pompom,
+  .xm-sleigh-bob,
+  .xm-deer-a,
+  .xm-deer-b {
+    animation: none;
+  }
+  .xm-sleigh-track {
+    display: none;
+  }
+}
