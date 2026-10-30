@@ -6,7 +6,7 @@ Le site reste libre d'accès : les jeux sont un bonus (bouton 🎄 « Jeux des f
 | Quoi | Du | Au (exclu) |
 |---|---|---|
 | ❄️ Neige sur tout le site | 1er décembre | 7 janvier |
-| 🎅 Père Noël 3D | 1er décembre | 27 décembre |
+| 🎅 Père Noël (dessiné, ou 3D si `santa.glb`) + 🛷 traîneau | 1er décembre | 27 décembre |
 | 🎁 Calendrier de l'Avent (1 énigme/jour, rattrapage possible) | 1er décembre | 25 décembre |
 | 🛷 La hotte piratée (9 épreuves + coffre, 3 tentatives) | 24 décembre | 31 décembre |
 | 🎆 Défi du Nouvel An (5 énigmes, 1 essai, compte à rebours) | 31 décembre | 7 janvier |
@@ -31,9 +31,14 @@ Ouvre le site avec une date simulée, par exemple :
 
 En aperçu, la neige et le Père Noël s'affichent aussi pendant ta visite, **mais rien n'est enregistré** sur le serveur.
 
-## 3. Le Père Noël 3D
+## 3. Le Père Noël
 
-Le site affiche le fichier **`public/santa/santa.glb`** s'il existe (sinon, rien ne s'affiche).
+**Par défaut**, un Père Noël **dessiné et animé** (coucou, clignement des yeux, « Ho ho ho ! » quand on le touche)
+s'affiche en bas à gauche, et un **traîneau tiré par des rennes** traverse le ciel du site toutes les 45 secondes environ.
+Rien à faire de ton côté.
+
+**En option**, pour un Père Noël **3D réaliste** : dépose un modèle **`public/santa/santa.glb`**.
+Il remplace alors automatiquement le Père Noël dessiné (le traîneau reste).
 Petite bulle en bas à gauche ; en la touchant, grande vue où on fait tourner le Père Noël,
 et sur téléphone, bouton **« Voir chez moi »** (réalité augmentée).
 

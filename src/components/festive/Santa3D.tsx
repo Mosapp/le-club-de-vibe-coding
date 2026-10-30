@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { SantaIllustrated } from "@/components/festive/SantaIllustrated";
 
 /* 🎅 Père Noël 3D
    Dépose le modèle dans public/santa/santa.glb (format glTF binaire, idéalement < 5 Mo, compressé Draco).
-   - Tant que le fichier n'existe pas, rien ne s'affiche (et la 3D n'est pas téléchargée).
+   - Tant que le fichier n'existe pas : Père Noël dessiné et animé (SantaIllustrated),
+     et la bibliothèque 3D n'est pas téléchargée.
    - S'il contient des animations, la première est jouée en boucle (ex. « coucou »).
    - Sur téléphone, bouton « Voir chez moi » : le Père Noël apparaît dans la pièce (réalité augmentée). */
 
@@ -20,7 +22,7 @@ async function modelExists() {
 }
 
 export function Santa3D() {
-  const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState<"checking" | "model" | "none">("checking");
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(() => {
     try {
@@ -34,9 +36,10 @@ export function Santa3D() {
     if (hidden) return;
     let alive = true;
     void modelExists().then(async (ok) => {
-      if (!ok || !alive) return;
+      if (!alive) return;
+      if (!ok) return setStatus("none");
       await import("@google/model-viewer");
-      if (alive) setReady(true);
+      if (alive) setStatus("model");
     });
     return () => {
       alive = false;
@@ -50,7 +53,17 @@ export function Santa3D() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  if (!ready || hidden) return null;
+  const hide = () => {
+    setHidden(true);
+    try {
+      window.sessionStorage.setItem(HIDE_KEY, "1");
+    } catch {
+      /* rien */
+    }
+  };
+
+  if (hidden || status === "checking") return null;
+  if (status === "none") return <SantaIllustrated onHide={hide} />;
 
   return (
     <>
@@ -74,14 +87,7 @@ export function Santa3D() {
         </button>
         <button
           type="button"
-          onClick={() => {
-            setHidden(true);
-            try {
-              window.sessionStorage.setItem(HIDE_KEY, "1");
-            } catch {
-              /* rien */
-            }
-          }}
+          onClick={hide}
           className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-[11px] text-white"
           aria-label="Masquer le Père Noël"
         >

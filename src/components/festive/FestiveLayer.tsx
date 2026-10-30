@@ -2,9 +2,10 @@ import { lazy, Suspense, useEffect } from "react";
 import { FESTIVE_WINDOWS, isOpen, previewDate, rememberPreview, useHashTick } from "@/config/festive";
 import { navigate, useRoute } from "@/lib/router";
 import { Snow } from "@/components/festive/Snow";
+import { SleighFlyby } from "@/components/festive/SantaIllustrated";
 
 /* 🎄 Décor des fêtes, ajouté par-dessus tout le site aux bonnes dates :
-   neige, Père Noël 3D et bouton « Jeux des fêtes ». En dehors des dates : rien du tout. */
+   neige, traîneau qui traverse le ciel, Père Noël (3D ou dessiné) et bouton « Jeux des fêtes ». En dehors des dates : rien du tout. */
 
 const Santa3D = lazy(() => import("@/components/festive/Santa3D").then((m) => ({ default: m.Santa3D })));
 
@@ -25,6 +26,7 @@ export function FestiveLayer() {
   return (
     <>
       {snow && <Snow dim={path === "/fetes"} />}
+      {santa && path !== "/fetes" && <SleighFlyby />}
       {santa && path !== "/fetes" && (
         <Suspense fallback={null}>
           <Santa3D />
