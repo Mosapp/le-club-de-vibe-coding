@@ -39,12 +39,24 @@ const TOTAL = buildGame().trials.length + 1;
 const MAX_ATTEMPTS = 10;
 /** score minimum (sur TOTAL) pour entrer sur le site */
 const PASS_SCORE = 5;
+/**
+ * Fin du jeu : à partir de cette date (heure de l'appareil du visiteur), le site revient
+ * tout seul à son état normal, sans énigme d'entrée ni épreuve ultime. Aucun redéploiement
+ * n'est nécessaire. Pour prolonger ou avancer la fin, il suffit de changer cette date.
+ * (Les mois commencent à 0 : 10 = novembre.)
+ */
+const GAME_END = new Date(2026, 10, 8, 0, 0, 0);
+
+export function isHalloweenOver(now = Date.now()) {
+  return now >= GAME_END.getTime();
+}
 
 const RULES = [
   "Chaque participant doit résoudre les épreuves dans l'ordre.",
   `Le site du club ne s'ouvre qu'aux détectives qui obtiennent au moins ${PASS_SCORE}/${TOTAL}.`,
   `Une seule participation par personne, ${MAX_ATTEMPTS} tentatives maximum. Après ${MAX_ATTEMPTS} échecs, le coffre se scelle pour toujours.`,
   "Une fois sur le site, chaque détective reçoit un fragment de la phrase secrète : l'épreuve ultime se gagne en équipe.",
+  `Le jeu se termine le ${GAME_END.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })} à 00 h 00 : le site redevient alors normal pour tout le monde.`,
   "Le gagnant sera déterminé selon les règles annoncées par l'organisateur : bonnes réponses et, en cas d'égalité, rapidité de participation.",
   "La date limite et les modalités de remise du prix seront communiquées par le club.",
 ];
@@ -123,6 +135,9 @@ export function HalloweenGate({ bypass = false, children }: { bypass?: boolean; 
       save(next);
       return next;
     });
+
+  // Après la date de fin : le site normal pour tout le monde.
+  if (isHalloweenOver()) return <>{children}</>;
 
   const played = !!progress?.entered && isSuccess(progress);
   if (bypass || played) {
