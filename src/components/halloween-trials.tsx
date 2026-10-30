@@ -101,7 +101,7 @@ function Stepper({
 
 /* ------------------------------- Hasard ---------------------------------- */
 
-type Rng = () => number;
+export type Rng = () => number;
 
 /** Générateur pseudo-aléatoire reproductible : même graine = même jeu (utile après un rechargement). */
 function mulberry32(seed: number): Rng {
@@ -129,6 +129,63 @@ function shuffle<T>(rng: Rng, arr: readonly T[]): T[] {
 export function newSeed() {
   return Math.floor(Math.random() * 2 ** 31);
 }
+
+/* ------------------------------- Thèmes ---------------------------------- */
+
+/** Les textes de chaque énigme : la logique (et donc les réponses) ne dépend que de la graine. */
+export type Theme = {
+  seq: { icon: string; title: string; lead: string };
+  bin: { icon: string; title: string; lead: string };
+  doors: { icon: string; title: string; lead: string; noun: string; Noun: string; prep: string; item: string; question: string };
+  cpp: { icon: string; title: string; actor: string; messages: readonly string[] };
+  res: { icon: string; title: string; actor: string };
+  blink: { icon: string; title: string; subject: string };
+  analog: { icon: string; title: string; lead: string };
+  ultra: { icon: string; title: string; target: string; emoji: string; question: string; label: string };
+  serial: { icon: string; actor: string; names: readonly (readonly [string, string])[] };
+};
+
+export const HALLOWEEN_THEME: Theme = {
+  seq: { icon: "👁️", title: "Le regard de la citrouille", lead: "Une citrouille mystérieuse affiche cette suite :" },
+  bin: { icon: "👻", title: "Le message du fantôme", lead: "Le fantôme a laissé ce message codé :" },
+  doors: {
+    icon: "🚪",
+    title: "La porte hantée",
+    lead: "Trois portes sont devant toi.",
+    noun: "porte",
+    Noun: "Porte",
+    prep: "derrière",
+    item: "Le trésor",
+    question: "Derrière quelle porte se trouve le trésor ?",
+  },
+  cpp: {
+    icon: "💀",
+    title: "Le crâne des développeurs",
+    actor: "Le fantôme programmeur a laissé un code C++ hanté.",
+    messages: ["HAPPY HALLOWEEN", "BOUH !", "TRICK OR TREAT", "CODE MAUDIT"],
+  },
+  res: { icon: "🔌", title: "La LED qui ne doit pas griller", actor: "Le fantôme" },
+  blink: { icon: "💡", title: "L'œil clignotant de la citrouille", subject: "L'œil de la citrouille" },
+  analog: { icon: "🌙", title: "Le capteur de clair de lune", lead: "Une photorésistance (LDR) surveille la lune." },
+  ultra: {
+    icon: "📡",
+    title: "Le radar à fantômes",
+    target: "un fantôme",
+    emoji: "👻",
+    question: "Place le fantôme à la distance calculée par le programme.",
+    label: "Distance du fantôme en cm",
+  },
+  serial: {
+    icon: "🖥️",
+    actor: "Le fantôme",
+    names: [
+      ["citrouilles", "citrouilles"],
+      ["fantômes", "fantomes"],
+      ["bonbons", "bonbons"],
+      ["chauves-souris", "chauvesSouris"],
+    ],
+  },
+};
 
 /* --------------------------------- QCM ---------------------------------- */
 
@@ -169,7 +226,7 @@ function mixChoices(rng: Rng, correct: string, wrong: string[]) {
 
 /* ---- Suite logique ---- */
 
-function sequenceTrial(rng: Rng): Trial {
+function sequenceTrial(rng: Rng, th: Theme = HALLOWEEN_THEME): Trial {
   const kind = int(rng, 0, 4);
   let terms: number[];
   let next: number;
@@ -203,11 +260,11 @@ function sequenceTrial(rng: Rng): Trial {
   const pool = [next + 1, next - 1, next + 2, next - 2, last + gap, last * 2, next + gap, next - gap].filter((n, i, arr) => n > 0 && n !== next && arr.indexOf(n) === i);
   const { choices, answer } = mixChoices(rng, String(next), shuffle(rng, pool).slice(0, 3).map(String));
   return qcm({
-    icon: "👁️",
-    title: "Le regard de la citrouille",
+    icon: th.seq.icon,
+    title: th.seq.title,
     intro: (
       <>
-        <p>Une citrouille mystérieuse affiche cette suite :</p>
+        <p>{th.seq.lead}</p>
         <p className="hw-code mt-3 text-center text-[clamp(1.2rem,5.5vw,1.7rem)] font-semibold tracking-[0.08em]">{[...terms, "?"].join(" — ")}</p>
       </>
     ),
@@ -221,7 +278,7 @@ function sequenceTrial(rng: Rng): Trial {
 
 const WORDS = ["CODE", "BITS", "BUGS", "LOOP", "DATA", "BYTE", "HACK", "NODE", "CHIP", "WIFI", "LUNE", "NUIT", "MODE", "GAME", "CAVE"];
 
-function binaryTrial(rng: Rng): Trial {
+function binaryTrial(rng: Rng, th: Theme = HALLOWEEN_THEME): Trial {
   const word = pick(rng, WORDS);
   const others = shuffle(
     rng,
@@ -232,11 +289,11 @@ function binaryTrial(rng: Rng): Trial {
   const wrong = [...similar, ...others.filter((w) => w[0] !== word[0])].slice(0, 3);
   const { choices, answer } = mixChoices(rng, word, wrong);
   return qcm({
-    icon: "👻",
-    title: "Le message du fantôme",
+    icon: th.bin.icon,
+    title: th.bin.title,
     intro: (
       <>
-        <p>Le fantôme a laissé ce message codé :</p>
+        <p>{th.bin.lead}</p>
         <p className="hw-code mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-center text-[clamp(0.95rem,4vw,1.15rem)]">
           {[...word].map((c, i) => (
             <span key={i}>{c.charCodeAt(0).toString(2).padStart(8, "0")}</span>
@@ -283,24 +340,28 @@ function doorsPuzzle(rng: Rng) {
   };
 }
 
-function doorsTrial(rng: Rng): Trial {
+function doorsTrial(rng: Rng, th: Theme = HALLOWEEN_THEME): Trial {
   const { clues, oneTrue, treasure } = doorsPuzzle(rng);
-  const label = (i: number) => `La porte ${DOORS[i].name}`;
+  const d = th.doors;
+  const label = (i: number) => `La ${d.noun} ${DOORS[i].name}`;
   const { choices, answer } = mixChoices(
     rng,
     label(treasure),
     [0, 1, 2].filter((i) => i !== treasure).map(label)
   );
   return qcm({
-    icon: "🚪",
-    title: "La porte hantée",
+    icon: d.icon,
+    title: d.title,
     intro: (
       <>
-        <p>Trois portes sont devant toi.</p>
+        <p>{d.lead}</p>
         <ul className="mt-3 space-y-2">
           {clues.map((c, i) => (
             <li key={i} className={cn("hw-door", DOORS[i].cls)}>
-              <b>Porte {DOORS[i].name} :</b> « Le trésor {c.is ? "est" : "n'est pas"} derrière la porte {DOORS[c.target].name}. »
+              <b>
+                {d.Noun} {DOORS[i].name} :
+              </b>{" "}
+              « {d.item} {c.is ? "est" : "n'est pas"} {d.prep} la {d.noun} {DOORS[c.target].name}. »
             </li>
           ))}
         </ul>
@@ -317,7 +378,7 @@ function doorsTrial(rng: Rng): Trial {
         </p>
       </>
     ),
-    question: "Derrière quelle porte se trouve le trésor ?",
+    question: d.question,
     choices,
     answer,
   });
@@ -361,20 +422,20 @@ const CPP_WRONG = [
   "Il faut écrire le message en minuscules.",
 ];
 
-function cppTrial(rng: Rng): Trial {
+function cppTrial(rng: Rng, th: Theme = HALLOWEEN_THEME): Trial {
   const bug = pick(rng, CPP_BUGS);
-  const msg = pick(rng, ["HAPPY HALLOWEEN", "BOUH !", "TRICK OR TREAT", "CODE MAUDIT"]);
+  const msg = pick(rng, th.cpp.messages);
   // Pas de leurre qui parle d'un #include absent du code
   const pool = CPP_WRONG.filter((w) => !(bug.code("").startsWith("using") && w.includes("#include")));
   const { choices, answer } = mixChoices(rng, bug.fix, shuffle(rng, pool).slice(0, 3));
   return qcm({
-    icon: "💀",
-    title: "Le crâne des développeurs",
+    icon: th.cpp.icon,
+    title: th.cpp.title,
     intro: (
       <>
         <p>
-          Le fantôme programmeur a laissé un code C++ hanté. Il veut afficher le message <b className="text-ink">{msg}</b>, mais une erreur
-          empêche le programme de fonctionner correctement.
+          {th.cpp.actor} Il veut afficher le message <b className="text-ink">{msg}</b>, mais une erreur empêche le programme de fonctionner
+          correctement.
         </p>
         <CodeBlock>{bug.code(msg)}</CodeBlock>
       </>
@@ -461,7 +522,7 @@ function ResistorWidget({ value, onChange, disabled }: WidgetProps) {
   );
 }
 
-function resistorTrial(supply: number, vf: number, ma: number): Trial {
+function resistorTrial(supply: number, vf: number, ma: number, th: Theme = HALLOWEEN_THEME): Trial {
   const target = Math.round((supply - vf) / (ma / 1000));
   const source =
     supply === 5 ? (
@@ -474,12 +535,12 @@ function resistorTrial(supply: number, vf: number, ma: number): Trial {
       </>
     );
   return {
-    icon: "🔌",
-    title: "La LED qui ne doit pas griller",
+    icon: th.res.icon,
+    title: th.res.title,
     intro: (
       <>
         <p>
-          Le fantôme veut allumer une LED {vf === 2 ? "rouge" : "bleue"} avec {source}. La LED garde <b className="text-ink">{vf} V</b> à ses
+          {th.res.actor} veut allumer une LED {vf === 2 ? "rouge" : "bleue"} avec {source}. La LED garde <b className="text-ink">{vf} V</b> à ses
           bornes et doit recevoir <b className="text-ink">{ma} mA</b>. Sans résistance, elle grille !
         </p>
         <p className="mt-3">
@@ -504,8 +565,8 @@ function resistorTrial(supply: number, vf: number, ma: number): Trial {
   };
 }
 
-function randomResistor(rng: Rng) {
-  return resistorTrial(pick(rng, [5, 9, 12]), pick(rng, [2, 3]), pick(rng, [10, 20]));
+function randomResistor(rng: Rng, th: Theme = HALLOWEEN_THEME) {
+  return resistorTrial(pick(rng, [5, 9, 12]), pick(rng, [2, 3]), pick(rng, [10, 20]), th);
 }
 
 /* ------------------------------ Le Blink ------------------------------ */
@@ -568,16 +629,24 @@ function duration(ms: number) {
 }
 
 /** lines = lignes dans l'ordre où elles sont proposées ; order = bon ordre (index dans lines). */
-function blinkTrial(pin: number, onMs: number, offMs: number, startOn: boolean, lines: string[], order: number[]): Trial {
+function blinkTrial(
+  pin: number,
+  onMs: number,
+  offMs: number,
+  startOn: boolean,
+  lines: string[],
+  order: number[],
+  th: Theme = HALLOWEEN_THEME
+): Trial {
   const first = startOn ? `allumée ${duration(onMs)}` : `éteinte ${duration(offMs)}`;
   const second = startOn ? `éteinte ${duration(offMs)}` : `allumée ${duration(onMs)}`;
   return {
-    icon: "💡",
-    title: "L'œil clignotant de la citrouille",
+    icon: th.blink.icon,
+    title: th.blink.title,
     intro: (
       <>
         <p>
-          L'œil de la citrouille est une LED branchée sur la broche {pin}. Elle doit rester <b className="text-ink">{first}</b>, puis{" "}
+          {th.blink.subject} est une LED branchée sur la broche {pin}. Elle doit rester <b className="text-ink">{first}</b>, puis{" "}
           <b className="text-ink">{second}</b>, et recommencer à l'infini.
         </p>
         <CodeBlock>{`void setup() {\n  pinMode(${pin}, OUTPUT);\n}`}</CodeBlock>
@@ -592,7 +661,7 @@ function blinkTrial(pin: number, onMs: number, offMs: number, startOn: boolean, 
   };
 }
 
-function randomBlink(rng: Rng) {
+function randomBlink(rng: Rng, th: Theme = HALLOWEEN_THEME) {
   const pin = pick(rng, [13, 12, 8, 7]);
   const [onMs, offMs] = shuffle(rng, [200, 250, 300, 500, 750, 1000, 1500, 2000]).slice(0, 2);
   const startOn = rng() < 0.6;
@@ -601,7 +670,7 @@ function randomBlink(rng: Rng) {
   const correct = startOn ? [high, `delay(${onMs});`, low, `delay(${offMs});`] : [low, `delay(${offMs});`, high, `delay(${onMs});`];
   let lines = shuffle(rng, correct);
   if (lines.join() === correct.join()) lines = [lines[1], lines[0], lines[3], lines[2]];
-  return blinkTrial(pin, onMs, offMs, startOn, lines, correct.map((l) => lines.indexOf(l)));
+  return blinkTrial(pin, onMs, offMs, startOn, lines, correct.map((l) => lines.indexOf(l)), th);
 }
 
 /* -------------------------- Capteur de lumière -------------------------- */
@@ -630,14 +699,14 @@ function makeAnalogWidget(pin: string) {
   };
 }
 
-function analogTrial(volts: number, pin: string, min: number, max: number): Trial {
+function analogTrial(volts: number, pin: string, min: number, max: number, th: Theme = HALLOWEEN_THEME): Trial {
   return {
-    icon: "🌙",
-    title: "Le capteur de clair de lune",
+    icon: th.analog.icon,
+    title: th.analog.title,
     intro: (
       <>
         <p>
-          Une photorésistance (LDR) surveille la lune. Ce soir, elle envoie <b className="text-ink">{String(volts).replace(".", ",")} V</b> sur
+          {th.analog.lead} Ce soir, elle envoie <b className="text-ink">{String(volts).replace(".", ",")} V</b> sur
           l'entrée analogique <b className="text-ink">{pin}</b> d'un Arduino Uno alimenté en <b className="text-ink">5 V</b>.
         </p>
         <p className="mt-3">Le convertisseur de l'Arduino Uno travaille sur 10 bits : il transforme 0 V → 5 V en un nombre entre 0 et 1023.</p>
@@ -652,75 +721,77 @@ function analogTrial(volts: number, pin: string, min: number, max: number): Tria
   };
 }
 
-function randomAnalog(rng: Rng) {
+function randomAnalog(rng: Rng, th: Theme = HALLOWEEN_THEME) {
   const volts = pick(rng, [1, 1.5, 2, 2.5, 3, 3.5, 4]);
   const expected = Math.round((volts / 5) * 1023);
-  return analogTrial(volts, pick(rng, ["A0", "A1", "A2", "A3"]), expected - 3, expected + 3);
+  return analogTrial(volts, pick(rng, ["A0", "A1", "A2", "A3"]), expected - 3, expected + 3, th);
 }
 
 /* -------------------------- Capteur à ultrasons -------------------------- */
 
-function UltrasonicWidget({ value, onChange, disabled }: WidgetProps) {
-  const cm = typeof value === "number" ? value : 40;
-  const pct = (cm / 50) * 100;
-  return (
-    <div>
-      <div className="hw-pre relative h-24 overflow-hidden rounded-xl" aria-hidden="true">
-        <div className="absolute left-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
-          <span className="block h-5 w-5 rounded-full border-2 border-[#9aa5b1] bg-[#1d2833]" />
-          <span className="block h-5 w-5 rounded-full border-2 border-[#9aa5b1] bg-[#1d2833]" />
+function makeUltrasonicWidget(emoji: string, label: string) {
+  return function UltrasonicWidget({ value, onChange, disabled }: WidgetProps) {
+    const cm = typeof value === "number" ? value : 40;
+    const pct = (cm / 50) * 100;
+    return (
+      <div>
+        <div className="hw-pre relative h-24 overflow-hidden rounded-xl" aria-hidden="true">
+          <div className="absolute left-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+            <span className="block h-5 w-5 rounded-full border-2 border-[#9aa5b1] bg-[#1d2833]" />
+            <span className="block h-5 w-5 rounded-full border-2 border-[#9aa5b1] bg-[#1d2833]" />
+          </div>
+          <div
+            className="hw-wave absolute top-1/2 h-px -translate-y-1/2 border-t-2 border-dashed border-brand/50"
+            style={{ left: 50, width: `calc((100% - 70px) * ${pct / 100})` }}
+          />
+          <span
+            className="absolute top-1/2 -translate-y-1/2 text-[30px] transition-[left] duration-200"
+            style={{ left: `calc(46px + (100% - 76px) * ${pct / 100})` }}
+          >
+            {emoji}
+          </span>
+          <div className="absolute inset-x-[50px] bottom-1.5 flex justify-between font-mono text-[10px] text-faint">
+            <span>0</span>
+            <span>25</span>
+            <span>50 cm</span>
+          </div>
         </div>
-        <div
-          className="hw-wave absolute top-1/2 h-px -translate-y-1/2 border-t-2 border-dashed border-brand/50"
-          style={{ left: 50, width: `calc((100% - 70px) * ${pct / 100})` }}
-        />
-        <span
-          className="absolute top-1/2 -translate-y-1/2 text-[30px] transition-[left] duration-200"
-          style={{ left: `calc(46px + (100% - 76px) * ${pct / 100})` }}
-        >
-          👻
-        </span>
-        <div className="absolute inset-x-[50px] bottom-1.5 flex justify-between font-mono text-[10px] text-faint">
-          <span>0</span>
-          <span>25</span>
-          <span>50 cm</span>
+        <p className="hw-code mt-3 text-center text-[20px] font-semibold">distance = {cm} cm</p>
+        <div className="mt-3">
+          <Stepper value={cm} min={0} max={50} disabled={disabled} onChange={onChange} label={label} />
         </div>
       </div>
-      <p className="hw-code mt-3 text-center text-[20px] font-semibold">distance = {cm} cm</p>
-      <div className="mt-3">
-        <Stepper value={cm} min={0} max={50} disabled={disabled} onChange={onChange} label="Distance du fantôme en cm" />
-      </div>
-    </div>
-  );
+    );
+  };
 }
 
-function ultrasonicTrial(micros: number): Trial {
+function ultrasonicTrial(micros: number, th: Theme = HALLOWEEN_THEME): Trial {
   // Même calcul qu'en C++ : multiplication puis division en double, puis troncature vers int.
   const exact = micros * 0.034 / 2;
   const accepted = new Set([Math.trunc(exact), Math.round(exact)]);
   return {
-    icon: "📡",
-    title: "Le radar à fantômes",
+    icon: th.ultra.icon,
+    title: th.ultra.title,
     intro: (
       <>
         <p>
-          Un capteur à ultrasons <b className="text-ink">HC-SR04</b> envoie un « bip » qui rebondit sur un fantôme. L'Arduino mesure la durée de
+          Un capteur à ultrasons <b className="text-ink">HC-SR04</b> envoie un « bip » qui rebondit sur {th.ultra.target}. L'Arduino mesure la durée de
           l'aller-retour de l'écho :
         </p>
         <CodeBlock>{`// l'écho a duré ${micros} µs\nlong duree = pulseIn(echoPin, HIGH);\n\n// distance en cm\nint distance = duree * 0.034 / 2;`}</CodeBlock>
         <p className="mt-3 text-[13px] text-faint">0,034 cm/µs est la vitesse du son ; on divise par 2 car l'onde fait l'aller et le retour.</p>
       </>
     ),
-    question: "Place le fantôme à la distance calculée par le programme.",
-    Widget: UltrasonicWidget,
+    question: th.ultra.question,
+    Widget: makeUltrasonicWidget(th.ultra.emoji, th.ultra.label),
     isReady: (v) => typeof v === "number",
     isCorrect: (v) => accepted.has(v as number),
     show: (v) => `${v} cm`,
   };
 }
 
-function randomUltrasonic(rng: Rng) {
-  return ultrasonicTrial(int(rng, 300, 1400) * 2);
+function randomUltrasonic(rng: Rng, th: Theme = HALLOWEEN_THEME) {
+  return ultrasonicTrial(int(rng, 300, 1400) * 2, th);
 }
 
 /* ---------------------------- Moniteur série ---------------------------- */
@@ -753,13 +824,13 @@ function SerialWidget({ value, onChange, disabled }: WidgetProps) {
   );
 }
 
-function serialTrial(name: string, code: string, result: number): Trial {
+function serialTrial(name: string, code: string, result: number, th: Theme = HALLOWEEN_THEME): Trial {
   return {
-    icon: "🖥️",
+    icon: th.serial.icon,
     title: `Le compteur de ${name}`,
     intro: (
       <>
-        <p>Ce programme est téléversé dans l'Arduino. Le fantôme ouvre le moniteur série…</p>
+        <p>Ce programme est téléversé dans l'Arduino. {th.serial.actor} ouvre le moniteur série…</p>
         <CodeBlock>{code}</CodeBlock>
       </>
     ),
@@ -775,13 +846,8 @@ function serialProgram(variable: string, start: number, loop: string, body: stri
   return `int ${variable} = ${start};\n\nvoid setup() {\n  Serial.begin(9600);\n  ${loop} {\n    ${body}\n  }\n  Serial.println(${variable});\n}\n\nvoid loop() {}`;
 }
 
-function randomSerial(rng: Rng) {
-  const [name, variable] = pick(rng, [
-    ["citrouilles", "citrouilles"],
-    ["fantômes", "fantomes"],
-    ["bonbons", "bonbons"],
-    ["chauves-souris", "chauvesSouris"],
-  ] as const);
+function randomSerial(rng: Rng, th: Theme = HALLOWEEN_THEME) {
+  const [name, variable] = pick(rng, th.serial.names);
   const kind = int(rng, 0, 2);
   if (kind === 0) {
     const start = int(rng, 1, 9);
@@ -789,17 +855,17 @@ function randomSerial(rng: Rng) {
     const b = a + int(rng, 2, 4);
     let r = start;
     for (let i = a; i <= b; i++) r += i;
-    return serialTrial(name, serialProgram(variable, start, `for (int i = ${a}; i <= ${b}; i++)`, `${variable} = ${variable} + i;`), r);
+    return serialTrial(name, serialProgram(variable, start, `for (int i = ${a}; i <= ${b}; i++)`, `${variable} = ${variable} + i;`), r, th);
   }
   if (kind === 1) {
     const start = int(rng, 1, 5);
     const n = int(rng, 3, 5);
     const step = int(rng, 2, 5);
-    return serialTrial(name, serialProgram(variable, start, `for (int i = 0; i < ${n}; i++)`, `${variable} += ${step};`), start + n * step);
+    return serialTrial(name, serialProgram(variable, start, `for (int i = 0; i < ${n}; i++)`, `${variable} += ${step};`), start + n * step, th);
   }
   const start = int(rng, 1, 3);
   const n = int(rng, 3, 4);
-  return serialTrial(name, serialProgram(variable, start, `for (int i = 0; i < ${n}; i++)`, `${variable} = ${variable} * 2;`), start * 2 ** n);
+  return serialTrial(name, serialProgram(variable, start, `for (int i = 0; i < ${n}; i++)`, `${variable} = ${variable} * 2;`), start * 2 ** n, th);
 }
 
 /* ------------------------------ Le jeu ------------------------------ */
@@ -919,20 +985,34 @@ export function buildGame(seed?: number): Game {
   if (seed === undefined) {
     game = legacyGame();
   } else {
-    const rng = mulberry32(seed);
-    const trials = [
-      sequenceTrial(rng),
-      binaryTrial(rng),
-      doorsTrial(rng),
-      cppTrial(rng),
-      randomResistor(rng),
-      randomBlink(rng),
-      randomAnalog(rng),
-      randomUltrasonic(rng),
-      randomSerial(rng),
-    ];
-    game = gameFrom(shuffle(rng, trials));
+    game = buildThemedGame(seed, HALLOWEEN_THEME);
   }
   cache.set(key, game);
   return game;
+}
+
+/** Les 9 types d'énigmes, dans l'ordre où ils consomment le hasard. */
+export const TRIAL_KINDS: ((rng: Rng, th: Theme) => Trial)[] = [
+  sequenceTrial,
+  binaryTrial,
+  doorsTrial,
+  cppTrial,
+  randomResistor,
+  randomBlink,
+  randomAnalog,
+  randomUltrasonic,
+  randomSerial,
+];
+
+/** Un jeu complet (9 énigmes mélangées + code du coffre) pour une graine et un thème. */
+export function buildThemedGame(seed: number, theme: Theme): Game {
+  const rng = mulberry32(seed);
+  const trials = TRIAL_KINDS.map((make) => make(rng, theme));
+  return gameFrom(shuffle(rng, trials));
+}
+
+/** Une seule énigme d'un type donné (0 à 8), pour une graine et un thème. */
+export function buildSingleTrial(seed: number, kind: number, theme: Theme): Trial {
+  const n = TRIAL_KINDS.length;
+  return TRIAL_KINDS[((kind % n) + n) % n](mulberry32(seed), theme);
 }

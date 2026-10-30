@@ -5,6 +5,7 @@ import { ClubProvider, useClub } from "@/lib/store";
 import { navigate, useRoute } from "@/lib/router";
 import { PageFade } from "@/lib/motion";
 import { HalloweenGate } from "@/components/halloween-gate";
+import { FestiveLayer } from "@/components/festive/FestiveLayer";
 import Landing from "@/pages/Landing";
 import Join from "@/pages/Join";
 import Login from "@/pages/Login";
@@ -13,6 +14,7 @@ import ResetPassword from "@/pages/ResetPassword";
 /* Chargement à la demande : l'espace membre et l'admin ne sont
    téléchargés que lorsque la personne y accède. */
 const GalleryPage = lazy(() => import("@/pages/Gallery"));
+const FestivePage = lazy(() => import("@/pages/Festive"));
 const MemberShell = lazy(() => import("@/pages/member/Shell").then((m) => ({ default: m.MemberShell })));
 const MemberHome = lazy(() => import("@/pages/member/Home"));
 const ProjectsPage = lazy(() => import("@/pages/member/Projects"));
@@ -85,6 +87,7 @@ function Routes() {
   if (path === "/login") return <Login />;
   if (path === "/reset") return <ResetPassword />;
   if (path === "/galerie") return <GalleryPage />;
+  if (path === "/fetes") return <FestivePage />;
 
   if (path.startsWith("/app")) {
     const sub = path.replace("/app", "") || "/";
@@ -207,7 +210,7 @@ function Shell() {
   const { toasts, dismissToast, confirmingEmail, me } = useClub();
   const path = useRoute();
   /* L'énigme ne bloque jamais un membre connecté ni les pages de connexion. */
-  const skipGate = !!me || path === "/login" || path === "/reset";
+  const skipGate = !!me || path === "/login" || path === "/reset" || path === "/fetes";
 
   useEffect(() => {
     document.body.style.overflow = "";
@@ -226,6 +229,7 @@ function Shell() {
           </PageFade>
         </HalloweenGate>
       )}
+      {!confirmingEmail && <FestiveLayer />}
       <Toaster toasts={toasts} onDismiss={dismissToast} />
     </>
   );
